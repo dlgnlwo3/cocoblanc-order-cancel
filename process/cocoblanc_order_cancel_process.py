@@ -442,9 +442,25 @@ class CocoblancOrderCancelProcess:
         try:
             self.dict_accounts = self.get_dict_account()
 
+            # 로그인
             self.ezadmin_login()
 
+            # cs창 진입
             self.switch_to_cs_screen()
+
+            # 품절시트의 행 만큼 작업
+
+            # 쇼핑몰의 수 만큼 작업
+            for account in self.dict_accounts:
+                print(account)
+
+                if account == "":
+                    pass
+
+                else:
+                    print(f"{account}: 해당 쇼핑몰 미구현")
+                    self.log_msg.emit(f"{account}: 해당 쇼핑몰 미구현")
+                    continue
 
         except Exception as e:
             print(str(e))
