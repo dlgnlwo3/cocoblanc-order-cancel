@@ -27,6 +27,10 @@ class ProgramConfig:
         if os.path.isdir(self.program_path) == False:
             os.mkdir(self.program_path)
 
+        # log_folder_path
+        if os.path.isdir(self.log_folder_path) == False:
+            os.mkdir(self.log_folder_path)
+
         # # output폴더
         # if not os.path.isdir(self.output_folder_name):
         #     os.mkdir(self.output_folder_name)

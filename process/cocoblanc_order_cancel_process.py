@@ -129,7 +129,6 @@ class CocoblancOrderCancelProcess:
         finally:
             driver.implicitly_wait(self.default_wait)
 
-    # 이지어드민 로그인 시 발생하는 팝업창을 모두 닫습니다.
     def close_ezadmin_notice_popups(self):
         driver = self.driver
         try:
@@ -163,6 +162,10 @@ class CocoblancOrderCancelProcess:
 
         finally:
             driver.implicitly_wait(self.default_wait)
+
+    def move_ezadmin_cs_screen(self):
+        driver = self.driver
+        time.sleep(0.5)
 
     def zigzag_login(self):
         driver = self.driver
@@ -407,15 +410,15 @@ class CocoblancOrderCancelProcess:
         print(f"process: work_start")
 
         try:
-            # 계정 엑셀 파일
             self.dict_accounts = self.get_dict_account()
 
             self.ezadmin_login()
 
-            store_detail_dto = StoreDetailDto()
+            self.move_ezadmin_cs_screen()
 
         except Exception as e:
             print(str(e))
+
         finally:
             self.driver.quit()
             time.sleep(0.2)
