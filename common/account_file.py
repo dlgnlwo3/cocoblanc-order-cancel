@@ -32,5 +32,5 @@ class AccountFile:
 
 
 if __name__ == "__main__":
-    synonym_file = AccountFile(r"D:\Consolework\ezadmin-crawler\excel\사이트 계정정보.xlsx")
+    synonym_file = AccountFile(r"D:\Consolework\cocoblanc-order-cancel\excel\사이트 계정정보.xlsx")
     synonym_file.output()
