@@ -53,28 +53,28 @@ class CocoblancOrderCancelTab(QWidget):
             account_file = self.account_file.text()
 
         if not os.path.isfile(account_file):
-            QMessageBox.information(self, "작업 시작", f"엑셀 경로가 잘못되었습니다.")
+            QMessageBox.information(self, "작업 시작", f"계정 엑셀 경로가 잘못되었습니다.")
             return
 
-        if self.stats_file.text() == "":
-            QMessageBox.information(self, "작업 시작", f"품절 엑셀 파일을 선택해주세요.")
-            return
-        else:
-            stats_file = self.stats_file.text()
+        # if self.stats_file.text() == "":
+        #     QMessageBox.information(self, "작업 시작", f"품절 엑셀 파일을 선택해주세요.")
+        #     return
+        # else:
+        #     stats_file = self.stats_file.text()
 
-        if not os.path.isfile(stats_file):
-            QMessageBox.information(self, "작업 시작", f"엑셀 경로가 잘못되었습니다.")
-            return
+        # if not os.path.isfile(stats_file):
+        #     QMessageBox.information(self, "작업 시작", f"품절 엑셀 경로가 잘못되었습니다.")
+        #     return
 
-        if self.sheet_combobox.currentText() == "":
-            print(f"시트를 선택해주세요.")
-            QMessageBox.information(self, "작업 시작", f"시트를 선택해주세요.")
-            self.log_append(f"시트를 선택해주세요.")
-            return
+        # if self.sheet_combobox.currentText() == "":
+        #     print(f"시트를 선택해주세요.")
+        #     QMessageBox.information(self, "작업 시작", f"시트를 선택해주세요.")
+        #     self.log_append(f"시트를 선택해주세요.")
+        #     return
 
         guiDto = GUIDto()
         guiDto.account_file = account_file
-        guiDto.stats_file = stats_file
+        # guiDto.stats_file = stats_file
         guiDto.sheet_name = self.sheet_combobox.currentText()
 
         self.crawler_thread = CocoblancOrderCancelThread()

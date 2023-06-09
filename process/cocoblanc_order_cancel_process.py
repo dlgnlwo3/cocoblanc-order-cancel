@@ -163,9 +163,39 @@ class CocoblancOrderCancelProcess:
         finally:
             driver.implicitly_wait(self.default_wait)
 
-    def move_ezadmin_cs_screen(self):
+    def switch_to_cs_screen(self):
         driver = self.driver
-        time.sleep(0.5)
+
+        # cs창을 여는 javascript, 새 창에서 열리게 된다.
+        driver.execute_script("javascript:popup_new_cs();")
+        time.sleep(1)
+
+        # driver.window_handles
+        tabs = driver.window_handles
+
+        # 새 창 (cs창)이 열리지 않았다면 작업 실패
+        if len(tabs) == 1:
+            raise Exception("cs창에 진입하지 못했습니다.")
+
+        # 새 창이 열렸다면 기존 창을 닫고 tab 전환
+        try:
+            driver.close()
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            driver.switch_to.window(driver.window_handles[-1])
+
+        # 현재 활성화 된 창이 cs창인지 검증
+        try:
+            cs_screen_title = driver.find_element(By.XPATH, '//span[@class="pgtitle"][text()="C/S"]')
+
+        except Exception as e:
+            print(str(e))
+            raise Exception("cs창이 활성화되지 않았습니다.")
+
+        time.sleep(1)
 
     def zigzag_login(self):
         driver = self.driver
@@ -414,7 +444,7 @@ class CocoblancOrderCancelProcess:
 
             self.ezadmin_login()
 
-            self.move_ezadmin_cs_screen()
+            self.switch_to_cs_screen()
 
         except Exception as e:
             print(str(e))
