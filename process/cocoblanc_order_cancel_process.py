@@ -38,8 +38,8 @@ class CocoblancOrderCancelProcess:
     def __init__(self):
         self.default_wait = 10
         # open_browser()
-        # self.driver: webdriver.Chrome = get_chrome_driver(is_headless=False, is_secret=False)
-        self.driver: webdriver.Chrome = get_chrome_driver_new(is_headless=False, is_secret=False)
+        self.driver: webdriver.Chrome = get_chrome_driver(is_headless=False, is_secret=False)
+        # self.driver: webdriver.Chrome = get_chrome_driver_new(is_headless=False, is_secret=False)
         self.driver.implicitly_wait(self.default_wait)
         self.driver.maximize_window()
 
@@ -196,6 +196,30 @@ class CocoblancOrderCancelProcess:
             raise Exception("cs창이 활성화되지 않았습니다.")
 
         time.sleep(1)
+
+    def shop_login(self, account):
+        if account == "카카오톡스토어":
+            self.kakao_shopping_login()
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
+        elif account == "":
+            pass
 
     def zigzag_login(self):
         driver = self.driver
@@ -435,8 +459,78 @@ class CocoblancOrderCancelProcess:
             print(e)
             raise Exception("티몬 로그인 실패")
 
+    def kakao_shopping_login(self):
+        driver = self.driver
+
+        try:
+            # 이전 로그인 세션이 남아있을 경우 해당 web element가 존재하지 않습니다.
+            WebDriverWait(driver, 5).until(
+                EC.visibility_of_element_located((By.XPATH, '//button[@type="submit"][contains(text(), "로그인")]'))
+            )
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"카카오쇼핑 로그인 화면이 아닙니다.")
+
+        try:
+            driver.implicitly_wait(1)
+
+            login_id = self.dict_accounts["카카오톡스토어"]["ID"]
+            login_pw = self.dict_accounts["카카오톡스토어"]["PW"]
+
+            id_input = driver.find_element(By.XPATH, '//input[@name="loginKey"]')
+            time.sleep(0.2)
+            id_input.click()
+            time.sleep(0.2)
+            id_input.clear()
+            time.sleep(0.2)
+            id_input.send_keys(login_id)
+
+            pw_input = driver.find_element(By.XPATH, '//input[@name="password"]')
+            time.sleep(0.2)
+            pw_input.click()
+            time.sleep(0.2)
+            pw_input.clear()
+            time.sleep(0.2)
+            pw_input.send_keys(login_pw)
+
+            login_button = driver.find_element(By.XPATH, '//button[@type="submit"][contains(text(), "로그인")]')
+            login_button.click()
+            time.sleep(1)
+
+        except Exception as e:
+            print(str(e))
+            print("카카오쇼핑 로그인 정보 입력 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
+
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, '//h1[./a[./img[@alt="톡스토어 판매자센터"]]]'))
+            )
+            time.sleep(0.5)
+
+        except Exception as e:
+            self.log_msg.emit(f"카카오톡스토어 로그인 실패")
+            print(e)
+            raise Exception("카카오톡스토어 로그인 실패")
+
+        # 각종 팝업창 닫기
+        try:
+            popup_close_button = driver.find_element(
+                By.XPATH, '//div[@class="popup-foot"]//button[./span[contains(text(), "닫기")]]'
+            )
+            driver.execute_script("arguments[0].click();", popup_close_button)
+            time.sleep(0.2)
+
+        except Exception as e:
+            print("popup not found")
+
     # 전체작업 시작
     def work_start(self):
+        driver = self.driver
+
         print(f"process: work_start")
 
         try:
@@ -452,15 +546,32 @@ class CocoblancOrderCancelProcess:
 
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
-                print(account)
+                try:
+                    if account == "이지어드민":
+                        continue
 
-                if account == "":
-                    pass
+                    print(account)
+                    account_url = self.dict_accounts[account]["URL"]
 
-                else:
-                    print(f"{account}: 해당 쇼핑몰 미구현")
-                    self.log_msg.emit(f"{account}: 해당 쇼핑몰 미구현")
-                    continue
+                    try:
+                        driver.execute_script(f"window.open('{account_url}');")
+                        driver.switch_to.window(driver.window_handles[1])
+                        time.sleep(0.5)
+
+                        self.shop_login(account)
+
+                    except Exception as e:
+                        print(str(e))
+                        print(f"{account} 작업 실패")
+
+                    finally:
+                        driver.close()
+                        driver.switch_to.window(driver.window_handles[0])
+
+                    time.sleep(1)
+
+                except Exception as e:
+                    print(str(e))
 
         except Exception as e:
             print(str(e))

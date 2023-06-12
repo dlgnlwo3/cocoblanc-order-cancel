@@ -42,10 +42,18 @@ class CocoblancOrderCancelTab(QWidget):
 
     # 크롬 브라우저
     def open_chrome_browser(self):
-        open_browser()
+        self.driver = open_browser()
 
     # 시작 클릭
     def crawler_start_button_clicked(self):
+        try:
+            self.driver
+
+        except Exception as e:
+            print(str(e))
+            QMessageBox.information(self, "작업 시작", f"브라우저를 열어주세요.")
+            return
+
         if self.account_file.text() == "":
             QMessageBox.information(self, "작업 시작", f"계정 엑셀 파일을 선택해주세요.")
             return
