@@ -41,7 +41,10 @@ class CocoblancOrderCancelProcess:
         self.driver: webdriver.Chrome = get_chrome_driver(is_headless=False, is_secret=False)
         # self.driver: webdriver.Chrome = get_chrome_driver_new(is_headless=False, is_secret=False)
         self.driver.implicitly_wait(self.default_wait)
-        self.driver.maximize_window()
+        try:
+            self.driver.maximize_window()
+        except Exception as e:
+            print(str(e))
 
     def setGuiDto(self, guiDto: GUIDto):
         self.guiDto = guiDto
@@ -558,7 +561,7 @@ class CocoblancOrderCancelProcess:
                         driver.switch_to.window(driver.window_handles[1])
                         time.sleep(0.5)
 
-                        self.shop_login(account)
+                        # self.shop_login(account)
 
                     except Exception as e:
                         print(str(e))
@@ -577,7 +580,7 @@ class CocoblancOrderCancelProcess:
             print(str(e))
 
         finally:
-            self.driver.quit()
+            driver.quit()
             time.sleep(0.2)
 
 

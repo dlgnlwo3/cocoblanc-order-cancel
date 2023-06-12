@@ -21,13 +21,16 @@ def global_log_append(text):
 
     log_path = ProgramConfig().log_folder_path
 
-    today_log = os.path.join(log_path, f"{today}.txt")
-    if os.path.isfile(today_log) == False:
-        f = open(today_log, "w", encoding="UTF8")
-    else:
-        f = open(today_log, "a", encoding="UTF8")
-    f.write(f"[{now}] {text}\n")
-    f.close()
+    try:
+        today_log = os.path.join(log_path, f"{today}.txt")
+        if os.path.isfile(today_log) == False:
+            f = open(today_log, "w", encoding="UTF8")
+        else:
+            f = open(today_log, "a", encoding="UTF8")
+        f.write(f"[{now}] {text}\n")
+        f.close()
+    except Exception as e:
+        print(str(e))
 
 
 def random_delay(start, end):

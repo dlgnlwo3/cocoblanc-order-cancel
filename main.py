@@ -7,14 +7,14 @@ if 1 == 1:
     warnings.simplefilter("ignore", UserWarning)
     sys.coinit_flags = 2
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 from common.chrome import *
 from dtos.gui_dto import *
 from common.utils import global_log_append
 from tabs.cocoblanc_order_cancel_tab import CocoblancOrderCancelTab
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from configs.program_config import ProgramConfig as Config
 
@@ -46,7 +46,7 @@ class MainUI(QWidget):
     # 가운데 정렬
     def center(self):
         qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
+        cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 

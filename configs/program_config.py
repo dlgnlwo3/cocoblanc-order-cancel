@@ -15,7 +15,7 @@ class ProgramConfig:
         self.program_path = os.path.join(self.app_data_path, self.program_id)
         self.exe_path = os.getcwd()  # 프로그램이 실행되는 exe파일 경로
         self.log_folder_name = "log"
-        self.log_folder_path = os.path.join(self.program_path, self.log_folder_name)
+        self.log_folder_path = os.path.join(self.exe_path, self.log_folder_name)
         self.init_folder()
 
     def init_folder(self):

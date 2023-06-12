@@ -3,9 +3,9 @@ import warnings
 
 warnings.simplefilter("ignore", UserWarning)
 sys.coinit_flags = 2
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 from datetime import *
 
 from threads.cocoblanc_order_cancel_thread import CocoblancOrderCancelThread
@@ -33,7 +33,7 @@ class CocoblancOrderCancelTab(QWidget):
         self.initUI()
 
     # 로그 작성
-    @pyqtSlot(str)
+    @Slot(str)
     def log_append(self, text):
         today = str(datetime.now())[0:10]
         now = str(datetime.now())[0:-7]
@@ -51,7 +51,7 @@ class CocoblancOrderCancelTab(QWidget):
 
         except Exception as e:
             print(str(e))
-            QMessageBox.information(self, "작업 시작", f"브라우저를 열어주세요.")
+            QMessageBox.information(self, "작업 시작", f"브라우저 작업을 마쳐주세요.")
             return
 
         if self.account_file.text() == "":
@@ -95,14 +95,14 @@ class CocoblancOrderCancelTab(QWidget):
         self.crawler_thread.start()
 
     # 중지 클릭
-    @pyqtSlot()
+    @Slot()
     def crawler_stop_button_clicked(self):
         print(f"search stop clicked")
         self.log_append(f"중지 클릭")
         self.crawler_finished()
 
     # 작업 종료
-    @pyqtSlot()
+    @Slot()
     def crawler_finished(self):
         print(f"search thread finished")
         self.log_append(f"작업 종료")
