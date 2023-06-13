@@ -696,6 +696,40 @@ class CocoblancOrderCancelProcess:
             pageSize_select.select_by_visible_text("500개씩")
             time.sleep(1)
 
+            # 취소 품목
+            order_cancel_target = driver.find_element(
+                By.XPATH,
+                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_cancel_number}")]',
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target)
+            time.sleep(1)
+
+            # 새 창 열림
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            kakao_order_cancel_tab = other_tabs[0]
+
+            try:
+                driver.switch_to.window(kakao_order_cancel_tab)
+                time.sleep(1)
+
+                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
+                driver.switch_to.frame(order_cancel_iframe)
+                time.sleep(0.5)
+
+                kakao_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
+                driver.execute_script("arguments[0].click();", kakao_order_cancel_button)
+                time.sleep(0.5)
+
+                # 취소 승인 하시겠습니까? alert
+
+            except Exception as e:
+                print(str(e))
+
+            finally:
+                driver.switch_to.window(self.shop_screen_tab)
+
         except Exception as e:
             print(str(e))
 
@@ -734,6 +768,8 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception(str(e))
 
         finally:
             driver.switch_to.window(self.shop_screen_tab)
