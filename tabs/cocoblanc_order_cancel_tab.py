@@ -45,7 +45,7 @@ class CocoblancOrderCancelTab(QWidget):
         self.driver = open_browser()
 
     # 시작 클릭
-    def crawler_start_button_clicked(self):
+    def start_button_clicked(self):
         try:
             self.driver
 
@@ -85,33 +85,33 @@ class CocoblancOrderCancelTab(QWidget):
         # guiDto.stats_file = stats_file
         guiDto.sheet_name = self.sheet_combobox.currentText()
 
-        self.crawler_thread = CocoblancOrderCancelThread()
-        self.crawler_thread.log_msg.connect(self.log_append)
-        self.crawler_thread.crawler_finished.connect(self.crawler_finished)
-        self.crawler_thread.setGuiDto(guiDto)
+        self.thread = CocoblancOrderCancelThread()
+        self.thread.log_msg.connect(self.log_append)
+        self.thread.finished.connect(self.finished)
+        self.thread.setGuiDto(guiDto)
 
-        self.crawler_start_button.setDisabled(True)
-        self.crawler_stop_button.setDisabled(False)
-        self.crawler_thread.start()
+        self.start_button.setDisabled(True)
+        self.stop_button.setDisabled(False)
+        self.thread.start()
 
     # 중지 클릭
     @Slot()
-    def crawler_stop_button_clicked(self):
+    def stop_button_clicked(self):
         print(f"search stop clicked")
         self.log_append(f"중지 클릭")
-        self.crawler_finished()
+        self.finished()
 
     # 작업 종료
     @Slot()
-    def crawler_finished(self):
+    def finished(self):
         print(f"search thread finished")
         self.log_append(f"작업 종료")
-        self.crawler_thread.stop()
-        self.crawler_start_button.setDisabled(False)
-        self.crawler_stop_button.setDisabled(True)
-        print(f"thread_is_running: {self.crawler_thread.isRunning()}")
+        self.thread.stop()
+        self.start_button.setDisabled(False)
+        self.stop_button.setDisabled(True)
+        print(f"thread_is_running: {self.thread.isRunning()}")
 
-    def crawler_save_button_clicked(self):
+    def save_button_clicked(self):
         dict_save = {"account_file": self.account_file.text(), "stats_file": self.stats_file.text()}
 
         question_msg = "현재 상태를 저장하시겠습니까?"
@@ -209,19 +209,19 @@ class CocoblancOrderCancelTab(QWidget):
 
         # 시작 중지
         start_stop_groupbox = QGroupBox("시작 중지")
-        self.crawler_save_button = QPushButton("저장")
-        self.crawler_start_button = QPushButton("시작")
-        self.crawler_stop_button = QPushButton("중지")
-        self.crawler_stop_button.setDisabled(True)
+        self.save_button = QPushButton("저장")
+        self.start_button = QPushButton("시작")
+        self.stop_button = QPushButton("중지")
+        self.stop_button.setDisabled(True)
 
-        self.crawler_save_button.clicked.connect(self.crawler_save_button_clicked)
-        self.crawler_start_button.clicked.connect(self.crawler_start_button_clicked)
-        self.crawler_stop_button.clicked.connect(self.crawler_stop_button_clicked)
+        self.save_button.clicked.connect(self.save_button_clicked)
+        self.start_button.clicked.connect(self.start_button_clicked)
+        self.stop_button.clicked.connect(self.stop_button_clicked)
 
         start_stop_inner_layout = QHBoxLayout()
-        start_stop_inner_layout.addWidget(self.crawler_save_button)
-        start_stop_inner_layout.addWidget(self.crawler_start_button)
-        start_stop_inner_layout.addWidget(self.crawler_stop_button)
+        start_stop_inner_layout.addWidget(self.save_button)
+        start_stop_inner_layout.addWidget(self.start_button)
+        start_stop_inner_layout.addWidget(self.stop_button)
         start_stop_groupbox.setLayout(start_stop_inner_layout)
 
         # 로그 그룹박스

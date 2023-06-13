@@ -21,7 +21,7 @@ import debugpy
 
 class CocoblancOrderCancelThread(QThread):
     log_msg = Signal(str)
-    crawler_finished = Signal()
+    finished = Signal()
 
     # 호출 시점
     def __init__(self):
@@ -57,7 +57,7 @@ class CocoblancOrderCancelThread(QThread):
             print(f"작업 중 오류가 발생했습니다. {str(e)}")
             self.log_msg.emit(f"작업 중 오류가 발생했습니다. {str(e)}")
 
-        self.crawler_finished.emit()
+        self.finished.emit()
 
     def stop(self):
         try:

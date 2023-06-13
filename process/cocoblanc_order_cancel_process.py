@@ -198,8 +198,11 @@ class CocoblancOrderCancelProcess:
             print(str(e))
             raise Exception("cs창이 활성화되지 않았습니다.")
 
+        self.cs_screen_tab = driver.window_handles[0]
+
         time.sleep(1)
 
+    # 로그인
     def shop_login(self, account):
         if account == "카카오톡스토어":
             self.kakao_shopping_login()
@@ -209,8 +212,6 @@ class CocoblancOrderCancelProcess:
             self.ticketmonster_login()
         elif account == "쿠팡":
             self.coupang_login()
-        elif account == "브랜디":
-            pass
         elif account == "11번가":
             self.eleven_street_login()
         elif account == "브리치":
@@ -560,7 +561,6 @@ class CocoblancOrderCancelProcess:
             time.sleep(1)
 
         except Exception as e:
-            print(str(e))
             print("카카오쇼핑 로그인 정보 입력 실패")
 
         finally:
@@ -574,7 +574,6 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             self.log_msg.emit(f"카카오톡스토어 로그인 실패")
-            print(e)
             raise Exception("카카오톡스토어 로그인 실패")
 
         # 각종 팝업창 닫기
@@ -587,6 +586,157 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print("popup not found")
+
+    # 취소요청 확인
+    def get_shop_order_cancel_list(self, account):
+        if account == "카카오톡스토어":
+            order_cancel_list = self.get_kakao_shopping_order_cancel_list()
+        elif account == "위메프":
+            order_cancel_list = []
+        elif account == "티몬":
+            order_cancel_list = []
+        elif account == "쿠팡":
+            order_cancel_list = []
+        elif account == "11번가":
+            order_cancel_list = []
+        elif account == "브리치":
+            order_cancel_list = []
+        elif account == "지그재그":
+            order_cancel_list = []
+        elif account == "네이버":
+            order_cancel_list = []
+
+        return order_cancel_list
+
+    def get_kakao_shopping_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+        try:
+            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
+            )
+            time.sleep(0.2)
+
+            # 500개씩 보기
+            pageSize_select = Select(driver.find_element(By.XPATH, '//select[@name="pageSize"]'))
+            pageSize_select.select_by_visible_text("500개씩")
+            time.sleep(1)
+
+            # 주문번호 목록
+            # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]')
+            order_number_list = driver.find_elements(
+                By.XPATH,
+                '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]',
+            )
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                if order_number.isdigit():
+                    order_cancel_list.append(order_number)
+                else:
+                    print(f"{order_number}는 숫자가 아닙니다.")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
+    def shop_order_cancel(self, account, order_cancel_list):
+        for order_cancel_number in order_cancel_list:
+            try:
+                print(f"{account} {order_cancel_number}")
+
+                if account == "카카오톡스토어":
+                    self.kakao_shopping_order_cancel(account, order_cancel_number)
+                elif account == "위메프":
+                    print(account)
+                elif account == "티몬":
+                    print(account)
+                elif account == "쿠팡":
+                    print(account)
+                elif account == "11번가":
+                    print(account)
+                elif account == "브리치":
+                    print(account)
+                elif account == "지그재그":
+                    print(account)
+                elif account == "네이버":
+                    print(account)
+
+            except Exception as e:
+                print(str(e))
+                self.log_msg.emit(f"{account}: {order_cancel_number} 작업 실패")
+                continue
+
+    def kakao_shopping_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+
+        try:
+            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
+            )
+            time.sleep(0.2)
+
+            # 500개씩 보기
+            pageSize_select = Select(driver.find_element(By.XPATH, '//select[@name="pageSize"]'))
+            pageSize_select.select_by_visible_text("500개씩")
+            time.sleep(1)
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def check_order_cancel_number_from_ezadmin(self, account, order_cancel_number):
+        driver = self.driver
+        try:
+            driver.switch_to.window(self.cs_screen_tab)
+
+            if account == "네이버":
+                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
+            else:
+                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
+
+            input_order_number.clear()
+            time.sleep(0.2)
+
+            input_order_number.send_keys(order_cancel_number)
+            time.sleep(0.2)
+
+            search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
+            driver.execute_script("arguments[0].click();", search_button)
+            time.sleep(3)
+
+            product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
+            product_cs_state = product_cs_state.get_attribute("textContent")
+            print(f"{account}, {order_cancel_number}, {product_cs_state}")
+
+            if not "배송전 주문취소" in product_cs_state:
+                raise Exception(f"{order_cancel_number} {product_cs_state}")
+
+            driver.refresh()
+            time.sleep(0.5)
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            driver.switch_to.window(self.shop_screen_tab)
 
     # 전체작업 시작
     def work_start(self):
@@ -603,8 +753,6 @@ class CocoblancOrderCancelProcess:
             # cs창 진입
             self.switch_to_cs_screen()
 
-            # 품절시트의 행 만큼 작업
-
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
@@ -616,10 +764,19 @@ class CocoblancOrderCancelProcess:
 
                     try:
                         driver.execute_script(f"window.open('{account_url}');")
-                        driver.switch_to.window(driver.window_handles[1])
+                        time.sleep(1)
+                        self.shop_screen_tab = driver.window_handles[1]
+                        driver.switch_to.window(self.shop_screen_tab)
                         time.sleep(1)
 
+                        # 쇼핑몰 로그인
                         self.shop_login(account)
+
+                        # 쇼핑몰 취소요청 확인
+                        order_cancel_list = self.get_shop_order_cancel_list(account)
+
+                        # 쇼핑몰 취소
+                        self.shop_order_cancel(account, order_cancel_list)
 
                     except Exception as e:
                         print(str(e))
@@ -627,7 +784,7 @@ class CocoblancOrderCancelProcess:
 
                     finally:
                         driver.close()
-                        driver.switch_to.window(driver.window_handles[0])
+                        driver.switch_to.window(self.cs_screen_tab)
 
                     time.sleep(1)
 

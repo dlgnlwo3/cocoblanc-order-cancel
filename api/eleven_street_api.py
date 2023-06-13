@@ -123,11 +123,11 @@ if __name__ == "__main__":
 
     APIBot = ElevenStreetAPI(openapikey)
 
-    startTime = "202306070000"
-    endTime = "202306072359"
+    startTime = "202306130000"
+    endTime = "202306132359"
 
     # 주문번호를 이용해서 주문상세정보를 가져옵니다.
-    data = asyncio.run(APIBot.get_completed_list_from_date(startTime, endTime))
+    data = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
 
     print(type(data))
 
