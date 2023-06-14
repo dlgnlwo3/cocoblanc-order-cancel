@@ -594,7 +594,7 @@ class CocoblancOrderCancelProcess:
         elif account == "위메프":
             order_cancel_list = self.get_wemakeprice_order_cancel_list()
         elif account == "티몬":
-            order_cancel_list = []
+            order_cancel_list = self.get_ticketmonster_order_cancel_list()
         elif account == "쿠팡":
             order_cancel_list = []
         elif account == "11번가":
@@ -682,6 +682,41 @@ class CocoblancOrderCancelProcess:
 
         return order_cancel_list
 
+    def get_ticketmonster_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+        try:
+            driver.get("https://spc.tmon.co.kr/claim/cancel")
+
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
+            time.sleep(0.2)
+
+            # 검색 클릭
+            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
+            driver.execute_script("arguments[0].click();", btn_srch)
+            time.sleep(3)
+
+            # 주문번호 목록
+            # $x('//tr[contains(@class, "_xp")]//a[contains(@href, "popupBuyDetailInfo")]')
+            order_number_list = driver.find_elements(
+                By.XPATH, '//tr[contains(@class, "_xp")]//a[contains(@href, "popupBuyDetailInfo")]'
+            )
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                if order_number.isdigit():
+                    order_cancel_list.append(order_number)
+                else:
+                    print(f"{order_number}는 숫자가 아닙니다.")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
     def shop_order_cancel(self, account, order_cancel_list):
         for order_cancel_number in order_cancel_list:
             try:
@@ -692,7 +727,7 @@ class CocoblancOrderCancelProcess:
                 elif account == "위메프":
                     self.wemakeprice_order_cancel(account, order_cancel_number)
                 elif account == "티몬":
-                    print(account)
+                    self.ticketmonster_order_cancel(account, order_cancel_number)
                 elif account == "쿠팡":
                     print(account)
                 elif account == "11번가":
@@ -805,7 +840,7 @@ class CocoblancOrderCancelProcess:
             # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
             order_cancel_target = driver.find_element(
                 By.XPATH,
-                f'//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "{order_cancel_number}")]',
+                f'//tr[./td[contains(@style, "underline") and contains(text(), "{order_cancel_number}")]]//img[contains(@onclick, "cancelBubble")]',
             )
             driver.execute_script("arguments[0].click();", order_cancel_target)
             time.sleep(1)
@@ -813,6 +848,80 @@ class CocoblancOrderCancelProcess:
             # 취소승인 버튼
             approveBtn = driver.find_element(By.XPATH, '//button[@id="approveBtn" and text()="취소승인"]')
             driver.execute_script("arguments[0].click();", approveBtn)
+            time.sleep(0.5)
+
+            # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.']
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            wemakeprice_order_cancel_tab = other_tabs[0]
+
+            try:
+                driver.switch_to.window(wemakeprice_order_cancel_tab)
+                time.sleep(1)
+
+                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
+                driver.switch_to.frame(order_cancel_iframe)
+                time.sleep(0.5)
+
+                wemakeprice_order_cancel_button = driver.find_element(
+                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
+                )
+                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                # time.sleep(0.5)
+
+                # 취소 승인 하시겠습니까? alert
+
+                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
+
+            except Exception as e:
+                print(str(e))
+
+            finally:
+                driver.close()
+                driver.switch_to.window(self.shop_screen_tab)
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def ticketmonster_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception((str(e)))
+
+        try:
+            driver.get("https://spc.tmon.co.kr/claim/cancel")
+
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
+            time.sleep(0.2)
+
+            # 검색 클릭
+            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
+            driver.execute_script("arguments[0].click();", btn_srch)
+            time.sleep(3)
+
+            # 취소 품목 체크박스
+            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
+            order_cancel_target_checkbox = driver.find_element(
+                By.XPATH,
+                f'//tr[.//a[text()="{order_cancel_number}"]]//img[contains(@onclick, "cancelBubble")]',
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
+            time.sleep(1)
+
+            # 취소처리 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//a[@class="btn_cancel_proc" and text()="취소처리"]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
             # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.']
@@ -872,9 +981,14 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", search_button)
             time.sleep(3)
 
-            order_cancel_number_td = driver.find_element(By.XPATH, f'//td[@title="{order_cancel_number}"]')
-            driver.execute_script("arguments[0].click();", order_cancel_number_td)
-            time.sleep(0.5)
+            try:
+                order_cancel_number_td = driver.find_element(By.XPATH, f'//td[@title="{order_cancel_number}"]')
+                driver.execute_script("arguments[0].click();", order_cancel_number_td)
+            except Exception as e:
+                print(str(e))
+                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
+            finally:
+                time.sleep(0.5)
 
             product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
             product_cs_state = product_cs_state.get_attribute("textContent")
@@ -939,6 +1053,8 @@ class CocoblancOrderCancelProcess:
                     finally:
                         driver.close()
                         driver.switch_to.window(self.cs_screen_tab)
+
+                        self.log_msg.emit(f"{account}: 작업 종료")
 
                     time.sleep(1)
 

@@ -67,31 +67,31 @@ class CocoblancOrderCancelTab(QWidget):
         guiDto = GUIDto()
         guiDto.account_file = account_file
 
-        self.thread = CocoblancOrderCancelThread()
-        self.thread.log_msg.connect(self.log_append)
-        self.thread.finished.connect(self.finished)
-        self.thread.setGuiDto(guiDto)
+        self.order_cancel_thread = CocoblancOrderCancelThread()
+        self.order_cancel_thread.log_msg.connect(self.log_append)
+        self.order_cancel_thread.finished.connect(self.finished)
+        self.order_cancel_thread.setGuiDto(guiDto)
 
         self.start_button.setDisabled(True)
         self.stop_button.setDisabled(False)
-        self.thread.start()
+        self.order_cancel_thread.start()
 
     # 중지 클릭
     @Slot()
     def stop_button_clicked(self):
-        print(f"search stop clicked")
+        print(f"stop clicked")
         self.log_append(f"중지 클릭")
         self.finished()
 
     # 작업 종료
     @Slot()
     def finished(self):
-        print(f"search thread finished")
+        print(f"order_cancel_thread finished")
         self.log_append(f"작업 종료")
-        self.thread.stop()
+        self.order_cancel_thread.stop()
         self.start_button.setDisabled(False)
         self.stop_button.setDisabled(True)
-        print(f"thread_is_running: {self.thread.isRunning()}")
+        print(f"thread_is_running: {self.order_cancel_thread.isRunning()}")
 
     def save_button_clicked(self):
         dict_save = {"account_file": self.account_file.text(), "stats_file": self.stats_file.text()}
