@@ -214,13 +214,76 @@ class CocoblancOrderCancelProcess:
         elif account == "지그재그":
             self.zigzag_login()
         elif account == "브리치":
-            pass
+            self.bflow_login()
         elif account == "쿠팡":
             self.coupang_login()
         elif account == "11번가":
             self.eleven_street_login()
         elif account == "네이버":
             pass
+
+    def bflow_login(self):
+        driver = self.driver
+
+        try:
+            WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//button[text()="로그인"]')))
+            time.sleep(1)
+
+            login_button = driver.find_element(By.XPATH, '//button[text()="로그인"]')
+            driver.execute_script("arguments[0].click();", login_button)
+            time.sleep(0.2)
+
+        except Exception as e:
+            pass
+
+        try:
+            driver.implicitly_wait(1)
+
+            login_id = self.dict_accounts["지그재그"]["ID"]
+            login_pw = self.dict_accounts["지그재그"]["PW"]
+
+            id_input = driver.find_element(By.XPATH, '//input[@placeholder="이메일"]')
+            time.sleep(0.2)
+            id_input.clear()
+            time.sleep(0.2)
+            id_input.send_keys(login_id)
+
+            pw_input = driver.find_element(By.XPATH, '//input[@placeholder="비밀번호"]')
+            time.sleep(0.2)
+            pw_input.clear()
+            time.sleep(0.2)
+            pw_input.send_keys(login_pw)
+
+            login_button = driver.find_element(By.XPATH, '//button[contains(text(), "로그인")]')
+            time.sleep(0.2)
+            login_button.click()
+            time.sleep(0.2)
+
+        except Exception as e:
+            print("로그인 정보 입력 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
+
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, '//div[contains(text(), "코코블랑")]'))
+            )
+            time.sleep(0.2)
+
+            store_link = driver.find_element(By.XPATH, '//a[contains(@href, "cocoblanc")]')
+            driver.execute_script("arguments[0].click();", store_link)
+            time.sleep(0.2)
+
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, '//span[contains(text(), "광고 관리")]'))
+            )
+            time.sleep(0.2)
+
+        except Exception as e:
+            self.log_msg.emit("지그재그 로그인 실패")
+            print(e)
+            raise Exception("지그재그 로그인 실패")
 
     def eleven_street_login(self):
         driver = self.driver
@@ -1166,7 +1229,7 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account == "이지어드민":
+                    if account != "브리치":
                         continue
 
                     print(account)
