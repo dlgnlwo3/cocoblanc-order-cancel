@@ -210,14 +210,14 @@ class CocoblancOrderCancelProcess:
             self.wemakeprice_login()
         elif account == "티몬":
             self.ticketmonster_login()
+        elif account == "지그재그":
+            self.zigzag_login()
+        elif account == "브리치":
+            pass
         elif account == "쿠팡":
             self.coupang_login()
         elif account == "11번가":
             self.eleven_street_login()
-        elif account == "브리치":
-            pass
-        elif account == "지그재그":
-            self.zigzag_login()
         elif account == "네이버":
             pass
 
@@ -595,13 +595,13 @@ class CocoblancOrderCancelProcess:
             order_cancel_list = self.get_wemakeprice_order_cancel_list()
         elif account == "티몬":
             order_cancel_list = self.get_ticketmonster_order_cancel_list()
-        elif account == "쿠팡":
-            order_cancel_list = []
-        elif account == "11번가":
+        elif account == "지그재그":
             order_cancel_list = []
         elif account == "브리치":
             order_cancel_list = []
-        elif account == "지그재그":
+        elif account == "쿠팡":
+            order_cancel_list = []
+        elif account == "11번가":
             order_cancel_list = []
         elif account == "네이버":
             order_cancel_list = []
@@ -728,13 +728,13 @@ class CocoblancOrderCancelProcess:
                     self.wemakeprice_order_cancel(account, order_cancel_number)
                 elif account == "티몬":
                     self.ticketmonster_order_cancel(account, order_cancel_number)
-                elif account == "쿠팡":
-                    print(account)
-                elif account == "11번가":
+                elif account == "지그재그":
                     print(account)
                 elif account == "브리치":
                     print(account)
-                elif account == "지그재그":
+                elif account == "쿠팡":
+                    print(account)
+                elif account == "11번가":
                     print(account)
                 elif account == "네이버":
                     print(account)
