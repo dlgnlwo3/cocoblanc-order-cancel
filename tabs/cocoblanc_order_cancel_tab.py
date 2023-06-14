@@ -64,26 +64,8 @@ class CocoblancOrderCancelTab(QWidget):
             QMessageBox.information(self, "작업 시작", f"계정 엑셀 경로가 잘못되었습니다.")
             return
 
-        # if self.stats_file.text() == "":
-        #     QMessageBox.information(self, "작업 시작", f"품절 엑셀 파일을 선택해주세요.")
-        #     return
-        # else:
-        #     stats_file = self.stats_file.text()
-
-        # if not os.path.isfile(stats_file):
-        #     QMessageBox.information(self, "작업 시작", f"품절 엑셀 경로가 잘못되었습니다.")
-        #     return
-
-        # if self.sheet_combobox.currentText() == "":
-        #     print(f"시트를 선택해주세요.")
-        #     QMessageBox.information(self, "작업 시작", f"시트를 선택해주세요.")
-        #     self.log_append(f"시트를 선택해주세요.")
-        #     return
-
         guiDto = GUIDto()
         guiDto.account_file = account_file
-        # guiDto.stats_file = stats_file
-        guiDto.sheet_name = self.sheet_combobox.currentText()
 
         self.thread = CocoblancOrderCancelThread()
         self.thread.log_msg.connect(self.log_append)
@@ -235,11 +217,11 @@ class CocoblancOrderCancelTab(QWidget):
         # 레이아웃 배치
         top_layout = QVBoxLayout()
         top_layout.addWidget(account_file_groupbox)
-        top_layout.addWidget(stats_file_groupbox)
+        # top_layout.addWidget(stats_file_groupbox)
 
         mid_layout = QHBoxLayout()
-        mid_layout.addStretch(6)
-        mid_layout.addWidget(sheet_setting_groupbox, 4)
+        # mid_layout.addStretch(6)
+        # mid_layout.addWidget(sheet_setting_groupbox, 4)
 
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch(5)
@@ -250,9 +232,9 @@ class CocoblancOrderCancelTab(QWidget):
         log_layout.addWidget(log_groupbox)
 
         layout = QVBoxLayout()
-        layout.addLayout(top_layout, 1)
-        layout.addLayout(mid_layout, 1)
-        layout.addLayout(bottom_layout, 1)
-        layout.addLayout(log_layout, 7)
+        layout.addLayout(top_layout)
+        # layout.addLayout(mid_layout, 1)
+        layout.addLayout(bottom_layout)
+        layout.addLayout(log_layout, 5)
 
         self.setLayout(layout)

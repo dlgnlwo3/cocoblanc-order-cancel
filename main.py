@@ -91,7 +91,7 @@ class MainUI(QWidget):
 
         # 앱 기본 설정
         self.setWindowTitle(f"코코블랑주문취소 v0.0.1")
-        self.resize(600, 900)
+        self.resize(600, 700)
         self.center()
         self.show()
 
