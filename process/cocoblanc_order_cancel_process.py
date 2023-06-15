@@ -226,7 +226,7 @@ class CocoblancOrderCancelProcess:
         driver = self.driver
 
         try:
-            WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//button[text()="로그인"]')))
+            WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, '//button[text()="로그인"]')))
             time.sleep(1)
 
             login_button = driver.find_element(By.XPATH, '//button[text()="로그인"]')
@@ -234,27 +234,33 @@ class CocoblancOrderCancelProcess:
             time.sleep(0.2)
 
         except Exception as e:
-            pass
+            print("로그인 화면이 아닙니다.")
 
         try:
             driver.implicitly_wait(1)
 
-            login_id = self.dict_accounts["지그재그"]["ID"]
-            login_pw = self.dict_accounts["지그재그"]["PW"]
+            login_id = self.dict_accounts["브리치"]["ID"]
+            login_pw = self.dict_accounts["브리치"]["PW"]
 
-            id_input = driver.find_element(By.XPATH, '//input[@placeholder="이메일"]')
+            id_input = driver.find_element(
+                By.XPATH, '//div[@class="login-area"]//input[@class="login-input"][@placeholder="이메일"]'
+            )
+            id_input.click()
             time.sleep(0.2)
             id_input.clear()
             time.sleep(0.2)
             id_input.send_keys(login_id)
 
-            pw_input = driver.find_element(By.XPATH, '//input[@placeholder="비밀번호"]')
+            pw_input = driver.find_element(
+                By.XPATH, '//div[@class="login-area"]//input[@class="login-input"][@placeholder="비밀번호"]'
+            )
+            pw_input.click()
             time.sleep(0.2)
             pw_input.clear()
             time.sleep(0.2)
             pw_input.send_keys(login_pw)
 
-            login_button = driver.find_element(By.XPATH, '//button[contains(text(), "로그인")]')
+            login_button = driver.find_element(By.XPATH, '//button[./span[contains(text(), "로그인")]]')
             time.sleep(0.2)
             login_button.click()
             time.sleep(0.2)
@@ -266,24 +272,35 @@ class CocoblancOrderCancelProcess:
             driver.implicitly_wait(self.default_wait)
 
         try:
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//div[contains(text(), "코코블랑")]'))
-            )
-            time.sleep(0.2)
+            driver.implicitly_wait(5)
+            main_page = driver.find_element(By.XPATH, '//div[@id="main-page"]')
 
-            store_link = driver.find_element(By.XPATH, '//a[contains(@href, "cocoblanc")]')
-            driver.execute_script("arguments[0].click();", store_link)
-            time.sleep(0.2)
-
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//span[contains(text(), "광고 관리")]'))
-            )
-            time.sleep(0.2)
+            time.sleep(5)
 
         except Exception as e:
             self.log_msg.emit("지그재그 로그인 실패")
-            print(e)
+            print(str(e))
             raise Exception("지그재그 로그인 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
+
+        # 팝업 닫기
+        # $x('//div[contains(@class, "modal")]//span[@class="close-btn"]')
+        try:
+            driver.implicitly_wait(1)
+
+            modal_close_btn = driver.find_element(
+                By.XPATH, '//div[contains(@class, "modal")]//span[@class="close-btn"]'
+            )
+            driver.execute_script("arguments[0].click();", modal_close_btn)
+            time.sleep(0.2)
+
+        except Exception as e:
+            print("no modal popup")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
 
     def eleven_street_login(self):
         driver = self.driver
