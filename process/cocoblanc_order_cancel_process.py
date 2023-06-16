@@ -1390,7 +1390,7 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account != "브리치":
+                    if account == "이지어드민":
                         continue
 
                     print(account)
