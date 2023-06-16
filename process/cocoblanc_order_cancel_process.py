@@ -854,29 +854,32 @@ class CocoblancOrderCancelProcess:
             # 로딩바 존재
             # $x('//div[contains(@class, "overlay")]')
             wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.5)
 
-            # xx개씩 보기 펼치기
-            StyledSelectTextWrapper = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledSelectTextWrapper")][./span[contains(text(), "씩 보기")]]'
+            # 취소요청 x 건 클릭
+            # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
+            cancel_request_link = driver.find_element(
+                By.XPATH,
+                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
             )
-            driver.execute_script("arguments[0].click();", StyledSelectTextWrapper)
+            driver.execute_script("arguments[0].click();", cancel_request_link)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
             time.sleep(0.2)
 
             # 500개씩 보기
-            StyledMenuItem = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledMenuItem") and text()="500개씩 보기"]'
-            )
-            driver.execute_script("arguments[0].click();", StyledMenuItem)
-            time.sleep(1)
+            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
+            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
+            driver.execute_script("arguments[0].click();", option_span)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.5)
 
-            # 주문번호 목록 -> 지그재그의 경우 구매자 연락처
-            # $x('//tr[contains(@class, "TableRow")]/td[10]')
-            order_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[10]')
-            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
+            # 주문번호 목록
+            order_number_list = driver.find_elements(
+                By.XPATH, '//table[contains(@class, "data-table")]//tbody/tr//td[2]'
+            )
             for order_number in order_number_list:
                 order_number = order_number.get_attribute("textContent")
-                if re.search(phone_number_pattern, order_number):
+                order_number = order_number.strip()
+                if order_number.isdigit():
                     order_cancel_list.append(order_number)
                 else:
                     print(f"{order_number}는 전화번호 양식이 아닙니다.")
@@ -903,7 +906,7 @@ class CocoblancOrderCancelProcess:
                 elif account == "지그재그":
                     self.zigzag_order_cancel(account, order_cancel_number)
                 elif account == "브리치":
-                    print(account)
+                    self.bflow_order_cancel(account, order_cancel_number)
                 elif account == "쿠팡":
                     print(account)
                 elif account == "11번가":
@@ -1197,6 +1200,97 @@ class CocoblancOrderCancelProcess:
             time.sleep(0.5)
 
             # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.']
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            wemakeprice_order_cancel_tab = other_tabs[0]
+
+            try:
+                driver.switch_to.window(wemakeprice_order_cancel_tab)
+                time.sleep(1)
+
+                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
+                driver.switch_to.frame(order_cancel_iframe)
+                time.sleep(0.5)
+
+                wemakeprice_order_cancel_button = driver.find_element(
+                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
+                )
+                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                # time.sleep(0.5)
+
+                # 취소 승인 하시겠습니까? alert
+
+                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
+
+            except Exception as e:
+                print(str(e))
+
+            finally:
+                driver.close()
+                driver.switch_to.window(self.shop_screen_tab)
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def bflow_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception((str(e)))
+
+        try:
+            driver.get("https://b-flow.co.kr/order/cancels")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "취소 관리")]'))
+            )
+            time.sleep(0.2)
+
+            # 로딩바 존재
+            # $x('//div[contains(@class, "overlay")]')
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+
+            # 취소요청 x 건 클릭
+            # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
+            cancel_request_link = driver.find_element(
+                By.XPATH,
+                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
+            )
+            driver.execute_script("arguments[0].click();", cancel_request_link)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.2)
+
+            # 500개씩 보기
+            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
+            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
+            driver.execute_script("arguments[0].click();", option_span)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.5)
+
+            # 취소 품목 체크박스
+            # '//tr[./td[.//span[contains(text(), "2023061616868779870")]]]//input[@type="checkbox"]'
+            order_cancel_target_checkbox = driver.find_element(
+                By.XPATH, f'//tr[./td[.//span[contains(text(), "{order_cancel_number}")]]]//input[@type="checkbox"]'
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
+            time.sleep(1)
+
+            # 취소완료 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
+            time.sleep(0.5)
+
+            # alert ('1개의 항목을 취소완료 처리하시겠습니까?', '취소완료 처리 할 항목을 선택해주세요')
             other_tabs = [
                 tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
             ]
