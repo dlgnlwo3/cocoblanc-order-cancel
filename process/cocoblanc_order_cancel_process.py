@@ -10,7 +10,7 @@ from dtos.gui_dto import GUIDto
 
 from common.utils import global_log_append
 from common.chrome import open_browser, get_chrome_driver, get_chrome_driver_new
-from common.selenium_activities import close_new_tabs, alert_ok_try
+from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading
 from common.account_file import AccountFile
 
 
@@ -675,7 +675,7 @@ class CocoblancOrderCancelProcess:
         elif account == "지그재그":
             order_cancel_list = self.get_zigzag_order_cancel_list()
         elif account == "브리치":
-            order_cancel_list = []
+            order_cancel_list = self.get_bflow_order_cancel_list()
         elif account == "쿠팡":
             order_cancel_list = []
         elif account == "11번가":
@@ -805,6 +805,56 @@ class CocoblancOrderCancelProcess:
 
             WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h1[text()="취소관리"]')))
             time.sleep(0.2)
+
+            # xx개씩 보기 펼치기
+            StyledSelectTextWrapper = driver.find_element(
+                By.XPATH, '//div[contains(@class, "StyledSelectTextWrapper")][./span[contains(text(), "씩 보기")]]'
+            )
+            driver.execute_script("arguments[0].click();", StyledSelectTextWrapper)
+            time.sleep(0.2)
+
+            # 500개씩 보기
+            StyledMenuItem = driver.find_element(
+                By.XPATH, '//div[contains(@class, "StyledMenuItem") and text()="500개씩 보기"]'
+            )
+            driver.execute_script("arguments[0].click();", StyledMenuItem)
+            time.sleep(1)
+
+            # 주문번호 목록 -> 지그재그의 경우 구매자 연락처
+            # $x('//tr[contains(@class, "TableRow")]/td[10]')
+            order_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[10]')
+            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                if re.search(phone_number_pattern, order_number):
+                    order_cancel_list.append(order_number)
+                else:
+                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
+    def get_bflow_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+        try:
+            driver.get("https://b-flow.co.kr/order/cancels")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "취소 관리")]'))
+            )
+            time.sleep(0.2)
+
+            # 로딩바 존재
+            # $x('//div[contains(@class, "overlay")]')
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.5)
 
             # xx개씩 보기 펼치기
             StyledSelectTextWrapper = driver.find_element(

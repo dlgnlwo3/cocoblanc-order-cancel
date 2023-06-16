@@ -36,6 +36,37 @@ from selenium import webdriver
 # console.log( getElementByXpath("//html[1]/body[1]/div[1]") );
 
 
+# 로딩화면
+def wait_loading(driver: webdriver.Chrome, loading_screen_xpath: str):
+    loading = True
+    wait_count = 1
+    driver.implicitly_wait(5)
+    try:
+        loading_screen = driver.find_element(By.XPATH, loading_screen_xpath)
+    except Exception as e:
+        print(f"loading finished already")
+
+    driver.implicitly_wait(1)
+    while loading:
+        try:
+            print(f"wait_count: {wait_count}")
+            loading_screen = driver.find_element(By.XPATH, loading_screen_xpath)
+            wait_count = wait_count + 1
+            loading = True
+            if wait_count > 60:
+                loading = False
+
+        except Exception as e:
+            print(f"로딩 완료")
+            break
+
+        finally:
+            time.sleep(1)
+
+    print(f"wait_loading finished")
+    driver.implicitly_wait(10)
+
+
 def switch_to_default_frame(driver: webdriver.Chrome):
     driver.switch_to.default_content()
 
