@@ -133,7 +133,6 @@ if __name__ == "__main__":
     fromDate = "2023-06-07 00:00:00"
     toDate = "2023-06-07 23:59:59"
 
-    # 주문번호를 이용해서 주문상세정보를 가져옵니다.
     data = asyncio.run(APIBot.get_notice_from_wemakeprice())
 
     print(type(data))

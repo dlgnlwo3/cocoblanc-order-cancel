@@ -677,7 +677,7 @@ class CocoblancOrderCancelProcess:
         elif account == "브리치":
             order_cancel_list = self.get_bflow_order_cancel_list()
         elif account == "쿠팡":
-            order_cancel_list = []
+            order_cancel_list = self.get_coupang_order_cancel_list()
         elif account == "11번가":
             order_cancel_list = []
         elif account == "네이버":
@@ -857,6 +857,68 @@ class CocoblancOrderCancelProcess:
 
             # 취소요청 x 건 클릭
             # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
+            cancel_request_link = driver.find_element(
+                By.XPATH,
+                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
+            )
+            driver.execute_script("arguments[0].click();", cancel_request_link)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.2)
+
+            # 500개씩 보기
+            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
+            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
+            driver.execute_script("arguments[0].click();", option_span)
+            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            time.sleep(0.5)
+
+            # 주문번호 목록
+            order_number_list = driver.find_elements(
+                By.XPATH, '//table[contains(@class, "data-table")]//tbody/tr//td[2]'
+            )
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                order_number = order_number.strip()
+                if order_number.isdigit():
+                    order_cancel_list.append(order_number)
+                else:
+                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
+    def get_coupang_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+        try:
+            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
+            )
+            time.sleep(0.5)
+
+            # 페이지를 넘겨가며 주문번호를 수집해야 함 (한 페이지에 10개씩 출력)
+            # 페이지 목록
+            # $x('//span[contains(@data-wuic-attrs, "page")]//a')
+            last_page = driver.find_elements(By.XPATH, '//span[contains(@data-wuic-attrs, "page")]//a')[
+                -1
+            ].get_attribute("textContent")
+            last_page = last_page.strip()
+            last_page = int(last_page)
+
+            print(f"last_page: {last_page}")
+
+            for i in range(1, last_page + 1):
+                print(i)
+
+            # $x('//table[.//tr[./th[contains(text(), "출고중지 처리")]]]//tr[not(th)]')
             cancel_request_link = driver.find_element(
                 By.XPATH,
                 '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
@@ -1390,7 +1452,7 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account == "이지어드민":
+                    if account != "쿠팡":
                         continue
 
                     print(account)
