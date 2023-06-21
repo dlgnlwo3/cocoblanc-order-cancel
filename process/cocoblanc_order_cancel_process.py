@@ -974,7 +974,7 @@ class CocoblancOrderCancelProcess:
                 elif account == "브리치":
                     self.bflow_order_cancel(account, order_cancel_number)
                 elif account == "쿠팡":
-                    print(account)
+                    self.coupang_order_cancel(account, order_cancel_number)
                 elif account == "11번가":
                     print(account)
                 elif account == "네이버":
@@ -1386,6 +1386,63 @@ class CocoblancOrderCancelProcess:
             finally:
                 driver.close()
                 driver.switch_to.window(self.shop_screen_tab)
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def coupang_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception((str(e)))
+
+        try:
+            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
+            )
+            time.sleep(0.5)
+
+            # 취소 품목 체크박스
+            # '//tr[./td[.//span[contains(text(), "2023061616868779870")]]]//input[@type="checkbox"]'
+            order_cancel_target_checkbox = driver.find_element(
+                By.XPATH, f'//tr[.//a[contains(text(), "{order_cancel_number}")]]/td//input[@type="checkbox"]'
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
+            time.sleep(1)
+
+            # 출고중지완료 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "출고중지완료")]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
+            time.sleep(0.5)
+
+            # modal창: 하기 1건을 출고중지 완료 하시겠습니까? 출고중지완료하시면 환불이 완료됩니다.
+            # $x('//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]')
+            try:
+                coupang_order_cancel_button = driver.find_element(
+                    By.XPATH,
+                    '//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]//div[@class="footer"]/button[contains(text(), "완료")]',
+                )
+                # driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
+                time.sleep(0.5)
+
+                # 취소 승인 하시겠습니까? alert
+
+                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
+
+            except Exception as e:
+                print(str(e))
+                print(f"쿠팡 취소 작업 실패")
 
         except Exception as e:
             print(str(e))
