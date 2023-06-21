@@ -1010,58 +1010,24 @@ class CocoblancOrderCancelProcess:
 
         order_cancel_list = []
         try:
-            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
+            driver.get("https://admin.pay.naver.com/o/v3/claim/cancel?summaryInfoType=CANCEL_REQUEST_C1")
 
             WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
+                EC.presence_of_element_located((By.XPATH, '//h2[contains(text(), "취소관리")]'))
             )
             time.sleep(0.5)
 
-            # 페이지를 넘겨가며 주문번호를 수집해야 함 (한 페이지에 10개씩 출력)
-            # 페이지 목록
-            # $x('//span[contains(@data-wuic-attrs, "page")]//a')
-            last_page_element = driver.find_elements(By.XPATH, '//span[contains(@data-wuic-attrs, "page")]//a')[-1]
-            last_page = last_page_element.get_attribute("textContent")
-            last_page = last_page.strip()
-            last_page = int(last_page)
-
-            print(f"last_page: {last_page}")
-
-            driver.execute_script("arguments[0].click();", last_page_element)
-            time.sleep(1)
-            for num in range(last_page, 0, -1):
-                print(f"page_num: {num}")
-                try:
-                    driver.implicitly_wait(1)
-                    num_page_link = driver.find_element(
-                        By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
-                    )
-                except Exception as e:
-                    try:
-                        prev_button = driver.find_element(By.XPATH, '//span[@data-wuic-partial="prev"]//a')
-                        driver.execute_script("arguments[0].click();", prev_button)
-                        time.sleep(1)
-                        num_page_link = driver.find_element(
-                            By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
-                        )
-                    except Exception as e:
-                        print(str(e))
-                finally:
-                    driver.implicitly_wait(self.default_wait)
-
-                driver.execute_script("arguments[0].click();", num_page_link)
-                time.sleep(1)
-
-                order_number_list = driver.find_elements(
-                    By.XPATH, '//table[.//tr[./th[contains(text(), "출고중지 처리")]]]//tr[not(th)]/td[12]'
-                )
-                for order_number in reversed(order_number_list):
-                    order_number = order_number.get_attribute("textContent")
-                    order_number = order_number.strip()
-                    if order_number.isdigit():
-                        order_cancel_list.insert(0, order_number)
-                    else:
-                        print(f"{order_number}는 숫자가 아닙니다.")
+            # 주문번호 목록 -> 네이버의 경우 구매자 연락처
+            # $x('//tr/td[@data-column-name="receiverTelNo1"]/div')
+            order_number_list = driver.find_elements(By.XPATH, '//tr/td[@data-column-name="receiverTelNo1"]/div')
+            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
+            virtual_number_pattern = r"050\d{1}-\d{3,4}-\d{3,4}"
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                if re.search(phone_number_pattern, order_number) or re.search(virtual_number_pattern, order_number):
+                    order_cancel_list.append(order_number)
+                else:
+                    print(f"{order_number}는 전화번호, 안심번호 양식이 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -1091,7 +1057,7 @@ class CocoblancOrderCancelProcess:
                 elif account == "11번가":
                     print(account)
                 elif account == "네이버":
-                    print(account)
+                    self.naver_order_cancel(account, order_cancel_number)
 
             except Exception as e:
                 print(str(e))
@@ -1556,6 +1522,97 @@ class CocoblancOrderCancelProcess:
             except Exception as e:
                 print(str(e))
                 print(f"쿠팡 취소 작업 실패")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def naver_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception((str(e)))
+
+        try:
+            driver.get("https://admin.pay.naver.com/o/v3/claim/cancel?summaryInfoType=CANCEL_REQUEST_C1")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h2[contains(text(), "취소관리")]'))
+            )
+            time.sleep(0.5)
+
+            # 취소 품목의 행 번호 -> rside
+            # $x('//tr[./td[@data-column-name="receiverTelNo1"]/div[text()="010-4134-0899"]]')
+            order_cancel_target_row = driver.find_element(
+                By.XPATH, f'//tr[./td[@data-column-name="receiverTelNo1"]/div[text()="{order_cancel_number}"]]'
+            ).get_attribute("data-row-key")
+
+            # 취소 품목 행과 동일한 lside에 존재하는 radiobutton
+            # $x('//div[@class="tui-grid-lside-area"]//tr[@data-row-key="1"]//input[contains(@type, "radio")]')
+            order_cancel_target_checkbox = driver.find_element(
+                By.XPATH,
+                f'//div[@class="tui-grid-lside-area"]//tr[@data-row-key="{order_cancel_target_row}"]//input[contains(@type, "radio")]',
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
+            time.sleep(0.5)
+
+            # 취소 완료처리 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[./span[text()="취소 완료처리"]]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
+            time.sleep(0.5)
+
+            # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소 승인 처리가 불가능한 상태입니다. 클레임 처리상태를 확인해 주세요.']
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            naver_order_cancel_tab = other_tabs[0]
+
+            try:
+                driver.switch_to.window(naver_order_cancel_tab)
+                time.sleep(1)
+
+                naver_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "저장")]')
+                # driver.execute_script("arguments[0].click();", naver_order_cancel_button)
+                # time.sleep(0.5)
+
+                # 클레임 비용이 0원인 건은 승인처리시 즉시 환불이 시도됩니다. 승인처리 하시겠습니까? alert
+                alert_msg = ""
+                try:
+                    WebDriverWait(driver, 5).until(EC.alert_is_present())
+                    alert = driver.switch_to.alert
+                    alert_msg = alert.text
+                except Exception as e:
+                    print(f"no alert")
+                    pass
+
+                print(f"{alert_msg}")
+
+                if "승인처리 하시겠습니까" in alert_msg:
+                    alert.dismiss()
+                    time.sleep(1)
+
+                elif alert_msg != "":
+                    raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
+
+                else:
+                    raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
+
+                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
+
+            except Exception as e:
+                print(str(e))
+
+            finally:
+                driver.close()
+                driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
             print(str(e))
