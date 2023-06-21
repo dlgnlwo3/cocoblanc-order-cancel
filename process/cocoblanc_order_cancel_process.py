@@ -907,44 +907,48 @@ class CocoblancOrderCancelProcess:
             # 페이지를 넘겨가며 주문번호를 수집해야 함 (한 페이지에 10개씩 출력)
             # 페이지 목록
             # $x('//span[contains(@data-wuic-attrs, "page")]//a')
-            last_page = driver.find_elements(By.XPATH, '//span[contains(@data-wuic-attrs, "page")]//a')[
-                -1
-            ].get_attribute("textContent")
+            last_page_element = driver.find_elements(By.XPATH, '//span[contains(@data-wuic-attrs, "page")]//a')[-1]
+            last_page = last_page_element.get_attribute("textContent")
             last_page = last_page.strip()
             last_page = int(last_page)
 
             print(f"last_page: {last_page}")
 
-            for i in range(1, last_page + 1):
-                print(i)
+            driver.execute_script("arguments[0].click();", last_page_element)
+            time.sleep(1)
+            for num in range(last_page, 0, -1):
+                print(f"page_num: {num}")
+                try:
+                    driver.implicitly_wait(1)
+                    num_page_link = driver.find_element(
+                        By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
+                    )
+                except Exception as e:
+                    try:
+                        prev_button = driver.find_element(By.XPATH, '//span[@data-wuic-partial="prev"]//a')
+                        driver.execute_script("arguments[0].click();", prev_button)
+                        time.sleep(1)
+                        num_page_link = driver.find_element(
+                            By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
+                        )
+                    except Exception as e:
+                        print(str(e))
+                finally:
+                    driver.implicitly_wait(self.default_wait)
 
-            # $x('//table[.//tr[./th[contains(text(), "출고중지 처리")]]]//tr[not(th)]')
-            cancel_request_link = driver.find_element(
-                By.XPATH,
-                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
-            )
-            driver.execute_script("arguments[0].click();", cancel_request_link)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.2)
+                driver.execute_script("arguments[0].click();", num_page_link)
+                time.sleep(1)
 
-            # 500개씩 보기
-            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
-            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
-            driver.execute_script("arguments[0].click();", option_span)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.5)
-
-            # 주문번호 목록
-            order_number_list = driver.find_elements(
-                By.XPATH, '//table[contains(@class, "data-table")]//tbody/tr//td[2]'
-            )
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                order_number = order_number.strip()
-                if order_number.isdigit():
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
+                order_number_list = driver.find_elements(
+                    By.XPATH, '//table[.//tr[./th[contains(text(), "출고중지 처리")]]]//tr[not(th)]/td[12]'
+                )
+                for order_number in reversed(order_number_list):
+                    order_number = order_number.get_attribute("textContent")
+                    order_number = order_number.strip()
+                    if order_number.isdigit():
+                        order_cancel_list.insert(0, order_number)
+                    else:
+                        print(f"{order_number}는 숫자가 아닙니다.")
 
         except Exception as e:
             print(str(e))
