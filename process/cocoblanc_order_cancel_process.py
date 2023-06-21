@@ -1591,7 +1591,6 @@ class CocoblancOrderCancelProcess:
                     alert_msg = alert.text
                 except Exception as e:
                     print(f"no alert")
-                    pass
 
                 print(f"{alert_msg}")
 
@@ -1683,7 +1682,7 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account != "네이버":
+                    if account != "11번가":
                         continue
 
                     print(account)

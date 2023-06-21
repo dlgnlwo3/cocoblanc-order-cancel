@@ -29,14 +29,13 @@ class ElevenStreetAPI:
     def get_headers(self):
         self.headers = {"openapikey": f"{self.openapikey}"}
 
+    # 주문 취소 목록
     @retry(
         wait=wait_fixed(3),  # 3초 대기
         stop=stop_after_attempt(2),  # 2번 재시도
     )
     async def get_cancelorders_from_date(self, startTime, endTime):
         auth_url = f"http://api.11st.co.kr/rest/claimservice/cancelorders/{startTime}/{endTime}"
-        # startTime, endTime
-        # YYYY-MM-DDThhmm
         result = requests.get(auth_url, headers=self.headers)
         result_text = result.text
         result_json = xmltodict.parse(result_text)
@@ -73,14 +72,13 @@ class ElevenStreetAPI:
 
         return result_json
 
+    # 주문취소 승인처리
     @retry(
         wait=wait_fixed(3),  # 3초 대기
         stop=stop_after_attempt(2),  # 2번 재시도
     )
-    async def get_completed_list_from_date(self, startTime, endTime):
-        auth_url = f"https://api.11st.co.kr/rest/ordservices/completed/{startTime}/{endTime}"
-        # startTime, endTime
-        # YYYY-MM-DDThhmm
+    async def cancelreqconf_from_ordInfo(self, ordPrdCnSeq, ordNo, ordPrdSeq):
+        auth_url = f"http://api.11st.co.kr/rest/claimservice/cancelreqconf/{ordPrdCnSeq}/{ordNo}/{ordPrdSeq}"
         result = requests.get(auth_url, headers=self.headers)
         result_text = result.text
         result_json = xmltodict.parse(result_text)
@@ -123,10 +121,14 @@ if __name__ == "__main__":
 
     APIBot = ElevenStreetAPI(openapikey)
 
-    startTime = "202306130000"
-    endTime = "202306132359"
+    startTime = "202306210000"
+    endTime = "202306212359"
 
-    # 주문번호를 이용해서 주문상세정보를 가져옵니다.
+    ordPrdCnSeq = ""  # 클레임번호
+    ordNo = ""  # 주문번호
+    ordPrdSeq = ""  # 주문순번
+
+    # 주문번호를 이용해서 주문취소목록을 가져옵니다. (클레임 목록)
     data = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
 
     print(type(data))
