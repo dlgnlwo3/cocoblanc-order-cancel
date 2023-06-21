@@ -28,6 +28,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.select import Select
 
+import pyperclip
 import time
 import re
 
@@ -220,7 +221,62 @@ class CocoblancOrderCancelProcess:
         elif account == "11번가":
             self.eleven_street_login()
         elif account == "네이버":
-            pass
+            self.naver_login()
+
+    def naver_login(self):
+        driver = self.driver
+
+        try:
+            WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//a[@id="loinid"]')))
+            time.sleep(0.5)
+
+        except Exception as e:
+            print("로그인 화면이 아닙니다.")
+
+        try:
+            driver.implicitly_wait(1)
+
+            login_id = self.dict_accounts["네이버"]["ID"]
+            login_pw = self.dict_accounts["네이버"]["PW"]
+
+            pyperclip.copy(login_id)
+            id_input = driver.find_element(By.XPATH, '//input[@id="id"]')
+            id_input.click()
+            time.sleep(0.2)
+            id_input.clear()
+            time.sleep(0.2)
+            id_input.send_keys(Keys.CONTROL, "v")
+
+            pyperclip.copy(login_pw)
+            pw_input = driver.find_element(By.XPATH, '//input[@id="pw"]')
+            pw_input.click()
+            time.sleep(0.2)
+            pw_input.clear()
+            time.sleep(0.2)
+            pw_input.send_keys(Keys.CONTROL, "v")
+
+            login_button = driver.find_element(By.XPATH, '//button[@id="log.login"]')
+            time.sleep(0.2)
+            login_button.click()
+            time.sleep(0.2)
+
+        except Exception as e:
+            print("로그인 정보 입력 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
+
+        try:
+            driver.implicitly_wait(5)
+            main_page_logo = driver.find_element(By.XPATH, '//a[./span[contains(text(), "네이버페이센터")]]')
+
+        except Exception as e:
+            self.log_msg.emit("네이버 로그인 실패")
+            print(str(e))
+            raise Exception("네이버 로그인 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
 
     def bflow_login(self):
         driver = self.driver
@@ -308,7 +364,7 @@ class CocoblancOrderCancelProcess:
         try:
             # 이전 로그인 세션이 남아있을 경우 바로 스토어 선택 화면으로 이동합니다.
             WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, '//h1[contains(text(), "파트너센터 로그인")]'))
+                EC.visibility_of_element_located((By.XPATH, '//h1[contains(text(), "셀러오피스")]'))
             )
             time.sleep(2)
 
@@ -318,22 +374,22 @@ class CocoblancOrderCancelProcess:
         try:
             driver.implicitly_wait(1)
 
-            login_id = self.dict_accounts["지그재그"]["ID"]
-            login_pw = self.dict_accounts["지그재그"]["PW"]
+            login_id = self.dict_accounts["11번가"]["ID"]
+            login_pw = self.dict_accounts["11번가"]["PW"]
 
-            id_input = driver.find_element(By.XPATH, '//input[@placeholder="이메일"]')
+            id_input = driver.find_element(By.XPATH, '//input[@id="loginName"]')
             time.sleep(0.2)
             id_input.clear()
             time.sleep(0.2)
             id_input.send_keys(login_id)
 
-            pw_input = driver.find_element(By.XPATH, '//input[@placeholder="비밀번호"]')
+            pw_input = driver.find_element(By.XPATH, '//input[@id="passWord"]')
             time.sleep(0.2)
             pw_input.clear()
             time.sleep(0.2)
             pw_input.send_keys(login_pw)
 
-            login_button = driver.find_element(By.XPATH, '//button[contains(text(), "로그인")]')
+            login_button = driver.find_element(By.XPATH, '//button[@value="로그인"]')
             time.sleep(0.2)
             login_button.click()
             time.sleep(0.2)
@@ -345,24 +401,15 @@ class CocoblancOrderCancelProcess:
             driver.implicitly_wait(self.default_wait)
 
         try:
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//div[contains(text(), "코코블랑")]'))
-            )
-            time.sleep(0.2)
-
-            store_link = driver.find_element(By.XPATH, '//a[contains(@href, "cocoblanc")]')
-            driver.execute_script("arguments[0].click();", store_link)
-            time.sleep(0.2)
-
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//span[contains(text(), "광고 관리")]'))
-            )
-            time.sleep(0.2)
+            main_page_link = driver.find_element(By.XPATH, '//h1[./a[contains(text(), "Seller Office")]]')
 
         except Exception as e:
-            self.log_msg.emit("지그재그 로그인 실패")
+            self.log_msg.emit("11번가 로그인 실패")
             print(e)
-            raise Exception("지그재그 로그인 실패")
+            raise Exception("11번가 로그인 실패")
+
+        finally:
+            driver.implicitly_wait(self.default_wait)
 
     def zigzag_login(self):
         driver = self.driver
@@ -681,7 +728,7 @@ class CocoblancOrderCancelProcess:
         elif account == "11번가":
             order_cancel_list = []
         elif account == "네이버":
-            order_cancel_list = []
+            order_cancel_list = self.get_naver_order_cancel_list()
 
         self.log_msg.emit(f"{account}: {len(order_cancel_list)}개의 주문번호를 발견했습니다.")
 
@@ -893,6 +940,72 @@ class CocoblancOrderCancelProcess:
         return order_cancel_list
 
     def get_coupang_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+        try:
+            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
+
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
+            )
+            time.sleep(0.5)
+
+            # 페이지를 넘겨가며 주문번호를 수집해야 함 (한 페이지에 10개씩 출력)
+            # 페이지 목록
+            # $x('//span[contains(@data-wuic-attrs, "page")]//a')
+            last_page_element = driver.find_elements(By.XPATH, '//span[contains(@data-wuic-attrs, "page")]//a')[-1]
+            last_page = last_page_element.get_attribute("textContent")
+            last_page = last_page.strip()
+            last_page = int(last_page)
+
+            print(f"last_page: {last_page}")
+
+            driver.execute_script("arguments[0].click();", last_page_element)
+            time.sleep(1)
+            for num in range(last_page, 0, -1):
+                print(f"page_num: {num}")
+                try:
+                    driver.implicitly_wait(1)
+                    num_page_link = driver.find_element(
+                        By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
+                    )
+                except Exception as e:
+                    try:
+                        prev_button = driver.find_element(By.XPATH, '//span[@data-wuic-partial="prev"]//a')
+                        driver.execute_script("arguments[0].click();", prev_button)
+                        time.sleep(1)
+                        num_page_link = driver.find_element(
+                            By.XPATH, f'//span[contains(@data-wuic-attrs, "page:{num}")]//a'
+                        )
+                    except Exception as e:
+                        print(str(e))
+                finally:
+                    driver.implicitly_wait(self.default_wait)
+
+                driver.execute_script("arguments[0].click();", num_page_link)
+                time.sleep(1)
+
+                order_number_list = driver.find_elements(
+                    By.XPATH, '//table[.//tr[./th[contains(text(), "출고중지 처리")]]]//tr[not(th)]/td[12]'
+                )
+                for order_number in reversed(order_number_list):
+                    order_number = order_number.get_attribute("textContent")
+                    order_number = order_number.strip()
+                    if order_number.isdigit():
+                        order_cancel_list.insert(0, order_number)
+                    else:
+                        print(f"{order_number}는 숫자가 아닙니다.")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
+    def get_naver_order_cancel_list(self):
         driver = self.driver
 
         order_cancel_list = []
@@ -1513,7 +1626,7 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account != "쿠팡":
+                    if account != "네이버":
                         continue
 
                     print(account)
