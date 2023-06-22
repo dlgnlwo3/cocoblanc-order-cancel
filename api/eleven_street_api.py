@@ -129,7 +129,9 @@ if __name__ == "__main__":
     ordPrdSeq = ""  # 주문순번
 
     # 주문번호를 이용해서 주문취소목록을 가져옵니다. (클레임 목록)
-    data = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
+    # data = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
+
+    data = asyncio.run(APIBot.cancelreqconf_from_ordInfo(ordPrdCnSeq, ordNo, ordPrdSeq))
 
     print(type(data))
 

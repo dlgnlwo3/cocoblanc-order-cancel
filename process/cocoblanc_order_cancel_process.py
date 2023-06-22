@@ -13,6 +13,7 @@ from common.chrome import open_browser, get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading
 from common.account_file import AccountFile
 
+from api.eleven_street_api import ElevenStreetAPI
 
 from enums.store_column_enum import CommonStoreEnum, Cafe24Enum, ElevenStreetEnum
 from enums.store_name_enum import StoreNameEnum
@@ -28,12 +29,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.select import Select
 
+import asyncio
 import pyperclip
 import time
 import re
 
 import pandas as pd
 from openpyxl import load_workbook
+from datetime import datetime, timedelta
 
 
 class CocoblancOrderCancelProcess:
@@ -64,7 +67,8 @@ class CocoblancOrderCancelProcess:
             account_id = str(row["ID"])
             account_pw = str(row["PW"])
             url = str(row["URL"])
-            dict_accounts[channel] = {"도메인": domain, "ID": account_id, "PW": account_pw, "URL": url}
+            api_key = str(row["API_KEY"])
+            dict_accounts[channel] = {"도메인": domain, "ID": account_id, "PW": account_pw, "URL": url, "API_KEY": api_key}
         return dict_accounts
 
     def ezadmin_login(self):
@@ -222,6 +226,8 @@ class CocoblancOrderCancelProcess:
             self.eleven_street_login()
         elif account == "네이버":
             self.naver_login()
+
+        self.log_msg.emit(f"{account}: 로그인 성공")
 
     def naver_login(self):
         driver = self.driver
@@ -726,7 +732,7 @@ class CocoblancOrderCancelProcess:
         elif account == "쿠팡":
             order_cancel_list = self.get_coupang_order_cancel_list()
         elif account == "11번가":
-            order_cancel_list = []
+            order_cancel_list = self.get_eleven_street_order_cancel_list()
         elif account == "네이버":
             order_cancel_list = self.get_naver_order_cancel_list()
 
@@ -1005,6 +1011,44 @@ class CocoblancOrderCancelProcess:
 
         return order_cancel_list
 
+    def get_eleven_street_order_cancel_list(self):
+        driver = self.driver
+
+        order_cancel_list = []
+
+        try:
+            APIBot = ElevenStreetAPI(self.dict_accounts["11번가"]["API_KEY"])
+
+            driver.get("https://soffice.11st.co.kr/view/6209?preViewCode=D")
+
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
+            time.sleep(0.5)
+
+            # 조회 기간은 최대 30일 YYYYMMDDhhmm  'strftime("%Y%m%d%H%M")' 활용
+            now = datetime.now()
+            startTime = str((now - timedelta(days=30)).strftime("%Y%m%d")) + "0000"
+            endTime = str(now.strftime("%Y%m%d")) + "2359"
+
+            # 취소처리 API에는 ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 총 세가지 정보가 필요하기 때문에 세개의 정보를 수집해야 함.
+            cancelorders = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
+
+            try:
+                api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
+
+                for api_cancelorder in api_cancelorder_list:
+                    order_cancel_list.insert(0, api_cancelorder["ordNo"])
+
+            except Exception as e:
+                print(str(e))
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            print(f"order_cancel_list: {order_cancel_list}")
+
+        return order_cancel_list
+
     def get_naver_order_cancel_list(self):
         driver = self.driver
 
@@ -1055,7 +1099,7 @@ class CocoblancOrderCancelProcess:
                 elif account == "쿠팡":
                     self.coupang_order_cancel(account, order_cancel_number)
                 elif account == "11번가":
-                    print(account)
+                    self.eleven_street_order_cancel(account, order_cancel_number)
                 elif account == "네이버":
                     self.naver_order_cancel(account, order_cancel_number)
 
@@ -1522,6 +1566,34 @@ class CocoblancOrderCancelProcess:
             except Exception as e:
                 print(str(e))
                 print(f"쿠팡 취소 작업 실패")
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            pass
+
+    def eleven_street_order_cancel(self, account, order_cancel_number):
+        driver = self.driver
+
+        # 주문번호 이지어드민 검증
+        try:
+            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+
+        except Exception as e:
+            print(str(e))
+            if order_cancel_number in str(e):
+                raise Exception((str(e)))
+
+        try:
+            APIBot = ElevenStreetAPI(self.dict_accounts["11번가"]["API_KEY"])
+
+            driver.get("https://soffice.11st.co.kr/view/6209?preViewCode=D")
+
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
+            time.sleep(0.5)
+
+            self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
         except Exception as e:
             print(str(e))

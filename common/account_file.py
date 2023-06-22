@@ -14,7 +14,7 @@ class AccountFile:
         self.initData()
 
     def account_data_type(self):
-        return {"채널명": str, "도메인": str, "ID": str, "PW": str, "URL": str}
+        return {"채널명": str, "도메인": str, "ID": str, "PW": str, "URL": str, "API_KEY": str}
 
     def initData(self):
         self.filepath = os.path.normpath(self.filepath)
