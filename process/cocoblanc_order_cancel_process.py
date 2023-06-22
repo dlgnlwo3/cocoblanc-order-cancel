@@ -1551,8 +1551,10 @@ class CocoblancOrderCancelProcess:
             print(f"{alert_msg}")
 
             if "취소완료 처리하시겠습니까" in alert_msg:
-                alert.accept()
+                alert.dismiss()
                 time.sleep(0.5)
+
+                # [취소번호: xxxxxxxx] 완료 처리되었습니다.
 
             elif alert_msg != "":
                 alert.accept()
@@ -1611,9 +1613,9 @@ class CocoblancOrderCancelProcess:
                     '//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]//div[@class="footer"]/button[contains(text(), "완료")]',
                 )
                 driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
-                time.sleep(0.5)
+                time.sleep(2)
 
-                # 취소 승인 하시겠습니까? alert
+                # 별다른 메시지 없이 처리됨
 
                 self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
@@ -1718,7 +1720,14 @@ class CocoblancOrderCancelProcess:
                 driver.switch_to.window(naver_order_cancel_tab)
                 time.sleep(1)
 
-                naver_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "저장")]')
+                # 취소비용 청구관련 구매자에게 전하실 말씀 (최대 500자) [구매자에게 전하실 말씀을 입력하십시오.]
+                seller_memo = "전체주문이 취소되어 클레임 비용을 청구하지 않습니다."
+                input_sellerMemoByCancel = driver.find_element(By.XPATH, '//input[@id="sellerMemoByCancel"]')
+                input_sellerMemoByCancel.clear()
+                input_sellerMemoByCancel.send_keys(seller_memo)
+                time.sleep(0.5)
+
+                naver_order_cancel_button = driver.find_element(By.XPATH, '//a[./span[text()="저장"]]')
                 driver.execute_script("arguments[0].click();", naver_order_cancel_button)
                 time.sleep(0.5)
 
@@ -1734,8 +1743,18 @@ class CocoblancOrderCancelProcess:
                 print(f"{alert_msg}")
 
                 if "승인처리 하시겠습니까" in alert_msg:
-                    alert.dismiss()
+                    alert.accept()
                     time.sleep(1)
+
+                    # 정상적으로 저장되었습니다. alert
+                    try:
+                        WebDriverWait(driver, 10).until(EC.alert_is_present())
+                    except Exception as e:
+                        print(f"no alert")
+                        raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
+
+                    alert_ok_try(driver)
+                    time.sleep(0.5)
 
                 elif alert_msg != "":
                     raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
@@ -1747,11 +1766,11 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
+                driver.close()
                 if account in str(e):
                     raise Exception(str(e))
 
             finally:
-                driver.close()
                 driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
@@ -1828,7 +1847,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "지그재그":
+                    if account != "네이버":
                         continue
 
                     print(account)
