@@ -1847,7 +1847,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "네이버":
+                    if account != "브리치":
                         continue
 
                     print(account)
