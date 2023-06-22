@@ -1452,9 +1452,21 @@ class CocoblancOrderCancelProcess:
             try:
                 zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
                 driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
-                time.sleep(0.5)
+                time.sleep(1)
 
-                # 취소 승인 하시겠습니까? alert
+                # 선택하신 1건의 상품주문을 환불처리 하시겠습니까?
+                cancel_agree_button = driver.find_element(
+                    By.XPATH,
+                    '//div[@class="modal-content"][.//div[contains(text(), "환불처리 하시겠습니까?")]]//button[text()="확인"]',
+                )
+                driver.execute_script("arguments[0].click();", cancel_agree_button)
+                time.sleep(5)
+
+                # 1개의 상품주문이 취소 완료 처리 되었습니다.
+                cancel_success_message = driver.find_element(
+                    By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
+                ).get_attribute("textContent")
+                print(cancel_success_message)
 
                 self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
@@ -1462,6 +1474,8 @@ class CocoblancOrderCancelProcess:
                 print(str(e))
                 if account in str(e):
                     raise Exception(str(e))
+                else:
+                    raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
 
         except Exception as e:
             print(str(e))
@@ -1814,7 +1828,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "티몬":
+                    if account != "지그재그":
                         continue
 
                     print(account)
