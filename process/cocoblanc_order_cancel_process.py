@@ -384,12 +384,14 @@ class CocoblancOrderCancelProcess:
             login_pw = self.dict_accounts["11번가"]["PW"]
 
             id_input = driver.find_element(By.XPATH, '//input[@id="loginName"]')
+            id_input.click()
             time.sleep(0.2)
             id_input.clear()
             time.sleep(0.2)
             id_input.send_keys(login_id)
 
             pw_input = driver.find_element(By.XPATH, '//input[@id="passWord"]')
+            pw_input.click()
             time.sleep(0.2)
             pw_input.clear()
             time.sleep(0.2)
@@ -437,14 +439,16 @@ class CocoblancOrderCancelProcess:
             login_pw = self.dict_accounts["지그재그"]["PW"]
 
             id_input = driver.find_element(By.XPATH, '//input[contains(@placeholder, "이메일")]')
+            id_input.click()
             time.sleep(0.2)
-            id_input.clear()
+            id_input.send_keys(Keys.LEFT_CONTROL, "a", Keys.BACK_SPACE)
             time.sleep(0.2)
             id_input.send_keys(login_id)
 
             pw_input = driver.find_element(By.XPATH, '//input[contains(@placeholder, "비밀번호")]')
+            pw_input.click()
             time.sleep(0.2)
-            pw_input.clear()
+            pw_input.send_keys(Keys.LEFT_CONTROL, "a", Keys.BACK_SPACE)
             time.sleep(0.2)
             pw_input.send_keys(login_pw)
 
@@ -1036,7 +1040,14 @@ class CocoblancOrderCancelProcess:
                 api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
 
                 for api_cancelorder in api_cancelorder_list:
-                    order_cancel_list.insert(0, api_cancelorder["ordNo"])
+                    order_cancel_list.insert(
+                        0,
+                        {
+                            "ordPrdCnSeq": api_cancelorder["ordPrdCnSeq"],
+                            "ordNo": api_cancelorder["ordNo"],
+                            "ordPrdSeq": api_cancelorder["ordPrdSeq"],
+                        },
+                    )
 
             except Exception as e:
                 print(str(e))
@@ -1241,13 +1252,7 @@ class CocoblancOrderCancelProcess:
                 driver.switch_to.window(wemakeprice_order_cancel_tab)
                 time.sleep(1)
 
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
-                time.sleep(0.5)
-
-                wemakeprice_order_cancel_button = driver.find_element(
-                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
-                )
+                wemakeprice_order_cancel_button = driver.find_element(By.XPATH, '//button[@id="approveBtn"]')
                 # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
                 # time.sleep(0.5)
 
@@ -1309,20 +1314,20 @@ class CocoblancOrderCancelProcess:
             other_tabs = [
                 tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
             ]
-            wemakeprice_order_cancel_tab = other_tabs[0]
+            ticketmonster_order_cancel_tab = other_tabs[0]
 
             try:
-                driver.switch_to.window(wemakeprice_order_cancel_tab)
+                driver.switch_to.window(ticketmonster_order_cancel_tab)
                 time.sleep(1)
 
                 order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
                 driver.switch_to.frame(order_cancel_iframe)
                 time.sleep(0.5)
 
-                wemakeprice_order_cancel_button = driver.find_element(
+                ticketmonster_order_cancel_button = driver.find_element(
                     By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
                 )
-                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                # driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
                 # time.sleep(0.5)
 
                 # 취소 승인 하시겠습니까? alert
@@ -1383,29 +1388,14 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
             time.sleep(1)
 
-            # 취소완료 버튼
+            # 취소완료 버튼 클릭 시 modal창 열림
             btn_cancel_proc = driver.find_element(By.XPATH, '//button[.//span[text()="취소완료"]]')
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
-            # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.']
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            wemakeprice_order_cancel_tab = other_tabs[0]
-
             try:
-                driver.switch_to.window(wemakeprice_order_cancel_tab)
-                time.sleep(1)
-
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
-                time.sleep(0.5)
-
-                wemakeprice_order_cancel_button = driver.find_element(
-                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
-                )
-                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
+                # driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
                 # time.sleep(0.5)
 
                 # 취소 승인 하시겠습니까? alert
@@ -1414,10 +1404,6 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
-
-            finally:
-                driver.close()
-                driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
             print(str(e))
@@ -1483,20 +1469,18 @@ class CocoblancOrderCancelProcess:
             other_tabs = [
                 tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
             ]
-            wemakeprice_order_cancel_tab = other_tabs[0]
+            bflow_order_cancel_tab = other_tabs[0]
 
             try:
-                driver.switch_to.window(wemakeprice_order_cancel_tab)
+                driver.switch_to.window(bflow_order_cancel_tab)
                 time.sleep(1)
 
                 order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
                 driver.switch_to.frame(order_cancel_iframe)
                 time.sleep(0.5)
 
-                wemakeprice_order_cancel_button = driver.find_element(
-                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
-                )
-                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                bflow_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
+                # driver.execute_script("arguments[0].click();", bflow_order_cancel_button)
                 # time.sleep(0.5)
 
                 # 취소 승인 하시겠습니까? alert
@@ -1576,13 +1560,18 @@ class CocoblancOrderCancelProcess:
     def eleven_street_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
+        # 11번가 order_cancel_number -> ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 세개의 정보가 담겨있음
         # 주문번호 이지어드민 검증
+        ordPrdCnSeq = order_cancel_number["ordPrdCnSeq"]
+        ordNo = order_cancel_number["ordNo"]
+        ordPrdSeq = order_cancel_number["ordPrdSeq"]
+
         try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+            self.check_order_cancel_number_from_ezadmin(account, ordNo)
 
         except Exception as e:
             print(str(e))
-            if order_cancel_number in str(e):
+            if ordNo in str(e):
                 raise Exception((str(e)))
 
         try:
@@ -1593,7 +1582,7 @@ class CocoblancOrderCancelProcess:
             WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
             time.sleep(0.5)
 
-            self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
+            self.log_msg.emit(f"{account} {ordNo}: 취소 완료")
 
         except Exception as e:
             print(str(e))
@@ -1754,8 +1743,12 @@ class CocoblancOrderCancelProcess:
             # 쇼핑몰의 수 만큼 작업
             for account in self.dict_accounts:
                 try:
-                    if account != "11번가":
+                    if account == "이지어드민":
                         continue
+
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "11번가":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
@@ -1793,10 +1786,6 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            driver.quit()
-            time.sleep(0.2)
 
 
 if __name__ == "__main__":

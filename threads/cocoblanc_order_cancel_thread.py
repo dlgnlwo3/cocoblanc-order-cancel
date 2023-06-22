@@ -57,7 +57,11 @@ class CocoblancOrderCancelThread(QThread):
             print(f"작업 중 오류가 발생했습니다. {str(e)}")
             self.log_msg.emit(f"작업 중 오류가 발생했습니다. {str(e)}")
 
-        self.finished.emit()
+        try:
+            self.finished.emit()
+
+        except Exception as e:
+            print(str(e))
 
     def stop(self):
         try:
