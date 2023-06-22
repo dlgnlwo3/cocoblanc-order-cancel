@@ -69,7 +69,7 @@ class CocoblancOrderCancelTab(QWidget):
 
         self.order_cancel_thread = CocoblancOrderCancelThread()
         self.order_cancel_thread.log_msg.connect(self.log_append)
-        self.order_cancel_thread.finished.connect(self.finished)
+        self.order_cancel_thread.order_cancel_thread_finished.connect(self.order_cancel_thread_finished)
         self.order_cancel_thread.setGuiDto(guiDto)
 
         self.start_button.setDisabled(True)
@@ -81,11 +81,11 @@ class CocoblancOrderCancelTab(QWidget):
     def stop_button_clicked(self):
         print(f"stop clicked")
         self.log_append(f"중지 클릭")
-        self.finished()
+        self.order_cancel_thread_finished()
 
     # 작업 종료
     @Slot()
-    def finished(self):
+    def order_cancel_thread_finished(self):
         print(f"order_cancel_thread finished")
         self.log_append(f"작업 종료")
         self.order_cancel_thread.stop()
@@ -166,19 +166,19 @@ class CocoblancOrderCancelTab(QWidget):
         account_file_groupbox.setLayout(account_file_inner_layout)
 
         # 품절 엑셀 파일
-        # stats_file_groupbox = QGroupBox("품절 엑셀 파일")
-        # self.stats_file = QLineEdit()
-        # self.stats_file.textChanged.connect(self.stats_file_textChanged)
-        # self.stats_file.setText(self.saved_data.stats_file)
-        # self.stats_file.setDisabled(True)
-        # self.stats_file_select_button = QPushButton("파일 선택")
+        stats_file_groupbox = QGroupBox("품절 엑셀 파일")
+        self.stats_file = QLineEdit()
+        self.stats_file.textChanged.connect(self.stats_file_textChanged)
+        self.stats_file.setText(self.saved_data.stats_file)
+        self.stats_file.setDisabled(True)
+        self.stats_file_select_button = QPushButton("파일 선택")
 
-        # self.stats_file_select_button.clicked.connect(self.stats_file_select_button_clicked)
+        self.stats_file_select_button.clicked.connect(self.stats_file_select_button_clicked)
 
-        # stats_file_inner_layout = QHBoxLayout()
-        # stats_file_inner_layout.addWidget(self.stats_file)
-        # stats_file_inner_layout.addWidget(self.stats_file_select_button)
-        # stats_file_groupbox.setLayout(stats_file_inner_layout)
+        stats_file_inner_layout = QHBoxLayout()
+        stats_file_inner_layout.addWidget(self.stats_file)
+        stats_file_inner_layout.addWidget(self.stats_file_select_button)
+        stats_file_groupbox.setLayout(stats_file_inner_layout)
 
         # 사전 작업용 브라우저
         chrome_browser_groupbox = QGroupBox("브라우저 사전 작업")

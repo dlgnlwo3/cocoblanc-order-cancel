@@ -1185,18 +1185,18 @@ class CocoblancOrderCancelProcess:
 
                 if "취소 승인 하시겠습니까" in alert_msg:
                     alert.accept()
-                    time.sleep(3)
 
                     # 정상처리 되었습니다. alert
                     try:
                         WebDriverWait(driver, 10).until(EC.alert_is_present())
                     except Exception as e:
                         print(f"no alert")
-                        pass
+                        raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
 
                     alert_ok_try(driver)
 
                 elif alert_msg != "":
+                    alert.accept()
                     raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
 
                 else:
@@ -1206,6 +1206,8 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
+                if account in str(e):
+                    raise Exception(str(e))
 
             finally:
                 driver.close()
@@ -1213,6 +1215,8 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
+            if account in str(e):
+                raise Exception(str(e))
 
     def wemakeprice_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1262,15 +1266,51 @@ class CocoblancOrderCancelProcess:
                 time.sleep(1)
 
                 wemakeprice_order_cancel_button = driver.find_element(By.XPATH, '//button[@id="approveBtn"]')
-                # driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
-                # time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", wemakeprice_order_cancel_button)
+                time.sleep(0.5)
 
-                # 취소 승인 하시겠습니까? alert
+                # 취소승인 하시겠습니까? alert
+                alert_msg = ""
+                try:
+                    WebDriverWait(driver, 5).until(EC.alert_is_present())
+                    alert = driver.switch_to.alert
+                    alert_msg = alert.text
+                except Exception as e:
+                    print(f"no alert")
+                    pass
+
+                print(f"{alert_msg}")
+
+                if "취소승인 하시겠습니까" in alert_msg:
+                    alert.accept()
+                    time.sleep(0.5)
+
+                    # 취소승인
+                    try:
+                        success_count = driver.find_element(By.XPATH, '//strong[@id="returnSuccessCnt"]').get_attribute(
+                            "textContent"
+                        )
+
+                        if success_count == 0:
+                            raise Exception("성공 건수가 0입니다.")
+
+                    except Exception as e:
+                        print(str(e))
+                        raise Exception(f"{account} {order_cancel_number}: {str(e)}")
+
+                elif alert_msg != "":
+                    alert.accept()
+                    raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
+
+                else:
+                    raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
 
                 self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
             except Exception as e:
                 print(str(e))
+                if account in str(e):
+                    raise Exception(str(e))
 
             finally:
                 driver.close()
@@ -1278,9 +1318,10 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def ticketmonster_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1345,6 +1386,8 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
+                if account in str(e):
+                    raise Exception(str(e))
 
             finally:
                 driver.close()
@@ -1352,9 +1395,10 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def zigzag_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1404,8 +1448,8 @@ class CocoblancOrderCancelProcess:
 
             try:
                 zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
-                # driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
-                # time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
+                time.sleep(0.5)
 
                 # 취소 승인 하시겠습니까? alert
 
@@ -1413,12 +1457,15 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
+                if account in str(e):
+                    raise Exception(str(e))
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def bflow_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1474,40 +1521,37 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
-            # alert ('1개의 항목을 취소완료 처리하시겠습니까?', '취소완료 처리 할 항목을 선택해주세요')
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            bflow_order_cancel_tab = other_tabs[0]
-
+            # 1개의 항목을 취소완료 처리하시겠습니까? alert
+            alert_msg = ""
             try:
-                driver.switch_to.window(bflow_order_cancel_tab)
-                time.sleep(1)
+                WebDriverWait(driver, 5).until(EC.alert_is_present())
+                alert = driver.switch_to.alert
+                alert_msg = alert.text
+            except Exception as e:
+                print(f"no alert")
+                raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
 
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
+            print(f"{alert_msg}")
+
+            if "취소완료 처리하시겠습니까" in alert_msg:
+                alert.accept()
                 time.sleep(0.5)
 
-                bflow_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
-                # driver.execute_script("arguments[0].click();", bflow_order_cancel_button)
-                # time.sleep(0.5)
+            elif alert_msg != "":
+                alert.accept()
+                raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
 
-                # 취소 승인 하시겠습니까? alert
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
 
-                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
-
-            except Exception as e:
-                print(str(e))
-
-            finally:
-                driver.close()
-                driver.switch_to.window(self.shop_screen_tab)
+            self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def coupang_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1549,7 +1593,7 @@ class CocoblancOrderCancelProcess:
                     By.XPATH,
                     '//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]//div[@class="footer"]/button[contains(text(), "완료")]',
                 )
-                # driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
+                driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
                 time.sleep(0.5)
 
                 # 취소 승인 하시겠습니까? alert
@@ -1558,13 +1602,15 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
-                print(f"쿠팡 취소 작업 실패")
+                if account in str(e):
+                    raise Exception(str(e))
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def eleven_street_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1591,13 +1637,19 @@ class CocoblancOrderCancelProcess:
             WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
             time.sleep(0.5)
 
+            ResultOrder = asyncio.run(APIBot.cancelreqconf_from_ordInfo(ordPrdCnSeq, ordNo, ordPrdSeq))
+
+            if ResultOrder["ResultOrder"]["result_code"] != "0":
+                raise Exception(f"{account} {ordNo}: 취소 승인 메시지를 찾지 못했습니다.")
+
             self.log_msg.emit(f"{account} {ordNo}: 취소 완료")
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {ordNo}: 해당 주문이 존재하지 않습니다.")
 
     def naver_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -1756,7 +1808,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "카카오톡스토어":
+                    if account != "11번가":
                         continue
 
                     print(account)
