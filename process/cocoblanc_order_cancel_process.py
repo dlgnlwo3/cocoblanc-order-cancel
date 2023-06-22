@@ -20,6 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.select import Select
 
+import pandas as pd
 import asyncio
 import pyperclip
 import time
@@ -1540,13 +1541,22 @@ class CocoblancOrderCancelProcess:
             print(f"{alert_msg}")
 
             if "취소완료 처리하시겠습니까" in alert_msg:
-                alert.dismiss()
-                time.sleep(0.5)
+                alert.accept()
+                time.sleep(1)
 
                 # [취소번호: xxxxxxxx] 완료 처리되었습니다.
+                try:
+                    cancel_success_message = driver.find_element(
+                        By.XPATH, '//li[contains(text(), "완료 처리되었습니다") and contains(text(), "취소번호")]'
+                    ).get_attribute("textContent")
+                    print(cancel_success_message)
+
+                except Exception as e:
+                    print(str(e))
+                    raise Exception(f"{account} {order_cancel_number}: 취소 성공 메시지를 찾지 못했습니다.")
 
             elif alert_msg != "":
-                alert.accept()
+                alert.dismiss()
                 raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
 
             else:
@@ -1835,9 +1845,9 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "브리치":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "브리치":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]

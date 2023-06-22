@@ -7,8 +7,6 @@ if 1 == 1:
     warnings.simplefilter("ignore", UserWarning)
     sys.coinit_flags = 2
 from tkinter import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from dtos.gui_dto import *
 from datetime import timedelta
@@ -16,7 +14,7 @@ from timeit import default_timer as timer
 
 from process.cocoblanc_order_cancel_process import CocoblancOrderCancelProcess
 
-# import debugpy
+import debugpy
 
 
 class CocoblancOrderCancelThread(QThread):
@@ -33,7 +31,7 @@ class CocoblancOrderCancelThread(QThread):
 
     def run(self):
         try:
-            # debugpy.debug_this_thread()
+            debugpy.debug_this_thread()
 
             self.log_msg.emit(f"시작")
 
