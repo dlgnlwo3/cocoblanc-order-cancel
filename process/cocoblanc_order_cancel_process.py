@@ -1037,7 +1037,10 @@ class CocoblancOrderCancelProcess:
             cancelorders = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
 
             try:
-                api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
+                if type(cancelorders["ns2:orders"]["ns2:order"]) == dict:
+                    api_cancelorder_list = [cancelorders["ns2:orders"]["ns2:order"]]
+                else:
+                    api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
 
                 for api_cancelorder in api_cancelorder_list:
                     order_cancel_list.insert(
