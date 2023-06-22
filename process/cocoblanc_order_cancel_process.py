@@ -1184,8 +1184,17 @@ class CocoblancOrderCancelProcess:
                 print(f"{alert_msg}")
 
                 if "취소 승인 하시겠습니까" in alert_msg:
-                    alert.dismiss()
-                    time.sleep(1)
+                    alert.accept()
+                    time.sleep(3)
+
+                    # 정상처리 되었습니다. alert
+                    try:
+                        WebDriverWait(driver, 10).until(EC.alert_is_present())
+                    except Exception as e:
+                        print(f"no alert")
+                        pass
+
+                    alert_ok_try(driver)
 
                 elif alert_msg != "":
                     raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
@@ -1746,9 +1755,9 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "11번가":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "카카오톡스토어":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
