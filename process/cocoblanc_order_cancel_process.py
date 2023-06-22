@@ -1363,27 +1363,31 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
-            # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.']
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            ticketmonster_order_cancel_tab = other_tabs[0]
-
+            # modal
             try:
-                driver.switch_to.window(ticketmonster_order_cancel_tab)
-                time.sleep(1)
-
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
+                ticketmonster_order_cancel_button = driver.find_element(
+                    By.XPATH, '//div[@class="spc_layer claim"][.//h3[text()="취소처리"]]//button[text()="확인"]'
+                )
+                driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
                 time.sleep(0.5)
 
-                ticketmonster_order_cancel_button = driver.find_element(
-                    By.XPATH, '//button[contains(text(), "취소승인(환불)")]'
-                )
-                # driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
-                # time.sleep(0.5)
+                # 요청한 1건의 처리가 완료되었습니다.
+                # $x('//*[contains(text(), "완료되었습니다")]')
+                try:
+                    driver.implicitly_wait(20)
+                    success_message = driver.find_element(By.XPATH, '//p[@class="message"]').get_attribute(
+                        "textContent"
+                    )
 
-                # 취소 승인 하시겠습니까? alert
+                    if not "완료되었습니다" in success_message:
+                        raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
+
+                except Exception as e:
+                    print(str(e))
+                    raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
+
+                finally:
+                    driver.implicitly_wait(self.default_wait)
 
                 self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
 
@@ -1391,10 +1395,6 @@ class CocoblancOrderCancelProcess:
                 print(str(e))
                 if account in str(e):
                     raise Exception(str(e))
-
-            finally:
-                driver.close()
-                driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
             print(str(e))
@@ -1814,7 +1814,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "네이버":
+                    if account != "티몬":
                         continue
 
                     print(account)
