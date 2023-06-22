@@ -8,25 +8,16 @@ if 1 == 1:
 from selenium import webdriver
 from dtos.gui_dto import GUIDto
 
-from common.utils import global_log_append
-from common.chrome import open_browser, get_chrome_driver, get_chrome_driver_new
+from common.chrome import get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading
 from common.account_file import AccountFile
 
 from api.eleven_street_api import ElevenStreetAPI
 
-from enums.store_column_enum import CommonStoreEnum, Cafe24Enum, ElevenStreetEnum
-from enums.store_name_enum import StoreNameEnum
-
-from features.convert_store_name import StoreNameConverter
-
-from dtos.store_detail_dto import StoreDetailDto
-
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver import ActionChains
 from selenium.webdriver.support.select import Select
 
 import asyncio
@@ -34,8 +25,6 @@ import pyperclip
 import time
 import re
 
-import pandas as pd
-from openpyxl import load_workbook
 from datetime import datetime, timedelta
 
 
@@ -1846,9 +1835,9 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "브리치":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "브리치":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]

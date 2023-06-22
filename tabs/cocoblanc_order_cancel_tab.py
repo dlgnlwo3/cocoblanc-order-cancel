@@ -12,14 +12,12 @@ from threads.cocoblanc_order_cancel_thread import CocoblancOrderCancelThread
 from dtos.gui_dto import GUIDto
 from common.utils import *
 
-from common.account_file import AccountFile
 import pandas as pd
 
 from configs.cocoblanc_order_cancel_config import CocoblancOrderCancelConfig as Config
 from configs.cocoblanc_order_cancel_config import CocoblancOrderCancelData as ConfigData
 
-from common.chrome import open_browser, get_chrome_driver
-from selenium import webdriver
+from common.chrome import open_browser
 
 
 class CocoblancOrderCancelTab(QWidget):
