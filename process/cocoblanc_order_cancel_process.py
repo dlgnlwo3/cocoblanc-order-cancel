@@ -1705,8 +1705,8 @@ class CocoblancOrderCancelProcess:
                 time.sleep(1)
 
                 naver_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "저장")]')
-                # driver.execute_script("arguments[0].click();", naver_order_cancel_button)
-                # time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", naver_order_cancel_button)
+                time.sleep(0.5)
 
                 # 클레임 비용이 0원인 건은 승인처리시 즉시 환불이 시도됩니다. 승인처리 하시겠습니까? alert
                 alert_msg = ""
@@ -1733,6 +1733,8 @@ class CocoblancOrderCancelProcess:
 
             except Exception as e:
                 print(str(e))
+                if account in str(e):
+                    raise Exception(str(e))
 
             finally:
                 driver.close()
@@ -1740,9 +1742,10 @@ class CocoblancOrderCancelProcess:
 
         except Exception as e:
             print(str(e))
-
-        finally:
-            pass
+            if account in str(e):
+                raise Exception(str(e))
+            else:
+                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def check_order_cancel_number_from_ezadmin(self, account, order_cancel_number):
         driver = self.driver
@@ -1811,7 +1814,7 @@ class CocoblancOrderCancelProcess:
                         continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "11번가":
+                    if account != "네이버":
                         continue
 
                     print(account)
