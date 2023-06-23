@@ -756,6 +756,12 @@ class CocoblancOrderCancelProcess:
             pageSize_select.select_by_visible_text("500개씩")
             time.sleep(1)
 
+            # 클레임번호 목록
+            claim_number_list = driver.find_elements(
+                By.XPATH,
+                '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
+            )
+
             # 주문번호 목록
             # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]')
             order_number_list = driver.find_elements(
@@ -818,19 +824,6 @@ class CocoblancOrderCancelProcess:
                         print(f"{order_number}는 숫자가 아닙니다.")
 
                 order_cancel_list.append({"claim_number": claim_number, "order_number_list": claim_order_number_list})
-
-            # # 주문번호 목록
-            # # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[4]')
-            # order_number_list = driver.find_elements(
-            #     By.XPATH,
-            #     '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[contains(@style, "underline")][1]',
-            # )
-            # for order_number in order_number_list:
-            #     order_number = order_number.get_attribute("textContent")
-            #     if order_number.isdigit():
-            #         order_cancel_list.append(order_number)
-            #     else:
-            #         print(f"{order_number}는 숫자가 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -1898,9 +1891,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "위메프":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "위메프":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
