@@ -792,18 +792,46 @@ class CocoblancOrderCancelProcess:
             schLimitCnt_select.select_by_visible_text("300개")
             time.sleep(3)
 
-            # 주문번호 목록
-            # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[4]')
-            order_number_list = driver.find_elements(
+            # 클레임번호 목록
+            # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]')
+            claim_number_list = driver.find_elements(
                 By.XPATH,
-                '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[contains(@style, "underline")][1]',
+                '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]',
             )
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if order_number.isdigit():
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 숫자가 아닙니다.")
+
+            for claim_number in claim_number_list:
+                claim_number = claim_number.get_attribute("textContent")
+                print(claim_number)
+
+                # 클레임번호가 포함되어있는 주문번호 목록
+                # $x('//tr[./td[text()="44807047"][not(@title)]]/td[contains(@style, "underline")][1]')
+                order_number_list = driver.find_elements(
+                    By.XPATH,
+                    f'//tr[./td[text()="{claim_number}"][not(@title)]]/td[contains(@style, "underline")][1]',
+                )
+
+                claim_order_number_list = []
+                for order_number in order_number_list:
+                    order_number = order_number.get_attribute("textContent")
+                    if order_number.isdigit():
+                        claim_order_number_list.append(order_number)
+                    else:
+                        print(f"{order_number}는 숫자가 아닙니다.")
+
+                order_cancel_list.append({"claim_number": claim_number, "order_number_list": claim_order_number_list})
+
+            # # 주문번호 목록
+            # # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[4]')
+            # order_number_list = driver.find_elements(
+            #     By.XPATH,
+            #     '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[contains(@style, "underline")][1]',
+            # )
+            # for order_number in order_number_list:
+            #     order_number = order_number.get_attribute("textContent")
+            #     if order_number.isdigit():
+            #         order_cancel_list.append(order_number)
+            #     else:
+            #         print(f"{order_number}는 숫자가 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -1280,7 +1308,7 @@ class CocoblancOrderCancelProcess:
                 print(f"{alert_msg}")
 
                 if "취소승인 하시겠습니까" in alert_msg:
-                    alert.accept()
+                    alert.dismiss()
                     time.sleep(0.5)
 
                     # 취소승인
@@ -1850,8 +1878,12 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
+                    # # 쇼핑몰 제외 테스트용 코드
+                    # if account == "위메프":
+                    #     continue
+
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "티몬":
+                    if account != "위메프":
                         continue
 
                     print(account)
