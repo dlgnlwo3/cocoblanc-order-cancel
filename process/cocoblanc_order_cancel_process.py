@@ -1845,9 +1845,9 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "브리치":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "브리치":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]

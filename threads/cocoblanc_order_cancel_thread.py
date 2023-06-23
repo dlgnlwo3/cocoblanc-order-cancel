@@ -14,7 +14,7 @@ from timeit import default_timer as timer
 
 from process.cocoblanc_order_cancel_process import CocoblancOrderCancelProcess
 
-import debugpy
+# import debugpy
 
 
 class CocoblancOrderCancelThread(QThread):
@@ -31,7 +31,7 @@ class CocoblancOrderCancelThread(QThread):
 
     def run(self):
         try:
-            debugpy.debug_this_thread()
+            # debugpy.debug_this_thread()
 
             self.log_msg.emit(f"시작")
 
