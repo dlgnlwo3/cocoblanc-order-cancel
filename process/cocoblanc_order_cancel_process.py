@@ -735,7 +735,7 @@ class CocoblancOrderCancelProcess:
         elif account == "네이버":
             order_cancel_list = self.get_naver_order_cancel_list()
 
-        self.log_msg.emit(f"{account}: {len(order_cancel_list)}개의 주문번호를 발견했습니다.")
+        self.log_msg.emit(f"{account}: {len(order_cancel_list)}개의 주문번호(묶음번호)를 발견했습니다.")
 
         return order_cancel_list
 
@@ -801,7 +801,6 @@ class CocoblancOrderCancelProcess:
 
             for claim_number in claim_number_list:
                 claim_number = claim_number.get_attribute("textContent")
-                print(claim_number)
 
                 # 클레임번호가 포함되어있는 주문번호 목록
                 # $x('//tr[./td[text()="44807047"][not(@title)]]/td[contains(@style, "underline")][1]')
@@ -1247,14 +1246,18 @@ class CocoblancOrderCancelProcess:
     def wemakeprice_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+        claim_number = order_cancel_number["claim_number"]
+        order_number_list = order_cancel_number["order_number_list"]
 
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
+        # 주문번호 이지어드민 검증
+        for order_number in order_number_list:
+            try:
+                self.check_order_cancel_number_from_ezadmin(account, order_number)
+
+            except Exception as e:
+                print(str(e))
+                if order_number in str(e):
+                    raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
 
         try:
             driver.get("https://wpartner.wemakeprice.com/claim/cancelMain")
@@ -1268,10 +1271,9 @@ class CocoblancOrderCancelProcess:
             time.sleep(3)
 
             # 취소 품목 체크박스
-            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
+            # $x('//tr[./td[text()="44807047"]]//img[contains(@onclick, "cancelBubble")]')
             order_cancel_target = driver.find_element(
-                By.XPATH,
-                f'//tr[./td[contains(@style, "underline") and contains(text(), "{order_cancel_number}")]]//img[contains(@onclick, "cancelBubble")]',
+                By.XPATH, f'//tr[./td[text()="{claim_number}"]]//img[contains(@onclick, "cancelBubble")]'
             )
             driver.execute_script("arguments[0].click();", order_cancel_target)
             time.sleep(1)
@@ -1308,7 +1310,7 @@ class CocoblancOrderCancelProcess:
                 print(f"{alert_msg}")
 
                 if "취소승인 하시겠습니까" in alert_msg:
-                    alert.dismiss()
+                    alert.accept()
                     time.sleep(0.5)
 
                     # 취소승인
@@ -1347,7 +1349,21 @@ class CocoblancOrderCancelProcess:
             if account in str(e):
                 raise Exception(str(e))
             else:
-                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
+                # 취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요.
+                failed_alert_msg = ""
+                try:
+                    WebDriverWait(driver, 3).until(EC.alert_is_present())
+                    failed_alert = driver.switch_to.alert
+                    failed_alert_msg = failed_alert.text
+                except Exception as e:
+                    print(f"no alert")
+
+                print(f"failed_alert_msg: {failed_alert_msg}")
+
+                if failed_alert_msg != "":
+                    raise Exception(f"{account} {order_cancel_number}: {failed_alert_msg}")
+                else:
+                    raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def ticketmonster_order_cancel(self, account, order_cancel_number):
         driver = self.driver
