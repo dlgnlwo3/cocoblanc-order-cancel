@@ -217,7 +217,7 @@ class CocoblancOrderCancelProcess:
         elif account == "네이버":
             self.naver_login()
 
-        self.log_msg.emit(f"{account}: 로그인 성공")
+        # self.log_msg.emit(f"{account}: 로그인 성공")
 
     def naver_login(self):
         driver = self.driver
@@ -514,7 +514,9 @@ class CocoblancOrderCancelProcess:
             driver.implicitly_wait(self.default_wait)
 
         try:
-            WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//img[@alt="위메프 파트너 2.0"]')))
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, '//strong[contains(text(), "취소신청")]'))
+            )
             time.sleep(0.5)
 
         except Exception as e:
@@ -621,12 +623,7 @@ class CocoblancOrderCancelProcess:
             WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "다음에 변경")]'))
             )
-            time.sleep(1)
-
-            change_next_time_button = driver.find_element(By.XPATH, '//button[contains(text(), "다음에 변경")]')
-            time.sleep(0.2)
-            change_next_time_button.click()
-            time.sleep(1)
+            time.sleep(3)
 
         except Exception as e:
             print("로그인 정보 입력 실패")
@@ -635,8 +632,16 @@ class CocoblancOrderCancelProcess:
             driver.implicitly_wait(self.default_wait)
 
         try:
+            change_next_time_button = driver.find_element(By.XPATH, '//button[contains(text(), "다음에 변경")]')
+            time.sleep(0.2)
+            change_next_time_button.click()
+            time.sleep(1)
+        except Exception as e:
+            print("비밀번호 변경 안내 스킵 실패")
+
+        try:
             WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//h1[./a[contains(text(), "TMON 배송상품 파트너센터")]]'))
+                EC.visibility_of_element_located((By.XPATH, '//h3[contains(text(), "취소/환불/교환 현황")]'))
             )
             time.sleep(0.5)
 
@@ -1845,9 +1850,9 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "브리치":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "티몬":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
