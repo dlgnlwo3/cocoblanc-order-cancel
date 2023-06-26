@@ -1927,7 +1927,7 @@ class CocoblancOrderCancelProcess:
             # finally:
             #     time.sleep(0.5)
 
-            # 아래쪽 결과
+            # 검색 결과
             cs_state_trs = driver.find_elements(
                 By.XPATH,
                 f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
@@ -1979,9 +1979,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "티몬":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "네이버":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
