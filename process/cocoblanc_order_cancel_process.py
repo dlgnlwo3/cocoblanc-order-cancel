@@ -1933,6 +1933,9 @@ class CocoblancOrderCancelProcess:
                 f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
             )
 
+            if len(cs_state_trs) == 0:
+                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
+
             for cs_state_tr in cs_state_trs:
                 driver.execute_script("arguments[0].click();", cs_state_tr)
                 product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
@@ -1977,7 +1980,7 @@ class CocoblancOrderCancelProcess:
                     #     continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "위메프":
+                    if account != "티몬":
                         continue
 
                     print(account)
