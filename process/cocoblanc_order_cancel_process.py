@@ -9,7 +9,7 @@ from selenium import webdriver
 from dtos.gui_dto import GUIDto
 
 from common.chrome import get_chrome_driver, get_chrome_driver_new
-from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading
+from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading, send_keys_to_driver
 from common.account_file import AccountFile
 
 from api.eleven_street_api import ElevenStreetAPI
@@ -19,6 +19,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.select import Select
+from selenium.webdriver import ActionChains
 
 import pandas as pd
 import asyncio
@@ -27,6 +28,7 @@ import time
 import re
 
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 
 class CocoblancOrderCancelProcess:
@@ -273,6 +275,24 @@ class CocoblancOrderCancelProcess:
 
         finally:
             driver.implicitly_wait(self.default_wait)
+
+        try:
+            # 새 창 열림
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            naver_popup_tab = other_tabs[0]
+
+            driver.switch_to.window(naver_popup_tab)
+            time.sleep(0.5)
+
+            driver.close()
+
+        except Exception as e:
+            print(str(e))
+
+        finally:
+            driver.switch_to.window(self.shop_screen_tab)
 
     def bflow_login(self):
         driver = self.driver
@@ -756,24 +776,65 @@ class CocoblancOrderCancelProcess:
             pageSize_select.select_by_visible_text("500개씩")
             time.sleep(1)
 
+            try:
+                driver.implicitly_wait(1)
+                not_found_message = driver.find_element(By.XPATH, '//div[text()="목록이 없습니다."]').get_attribute(
+                    "textContent"
+                )
+                print(not_found_message)
+                return order_cancel_list
+
+            except Exception as e:
+                pass
+
+            finally:
+                driver.implicitly_wait(self.default_wait)
+
             # 클레임번호 목록
-            claim_number_list = driver.find_elements(
+            first_line_in_table = driver.find_element(
                 By.XPATH,
                 '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
             )
+            driver.execute_script("arguments[0].click();", first_line_in_table)
+            time.sleep(0.2)
 
-            # 주문번호 목록
-            # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]')
-            order_number_list = driver.find_elements(
-                By.XPATH,
-                '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]',
+            # 목록의 갯수
+            claim_count = driver.find_element(By.XPATH, '//div[contains(@id, "AX_gridStatus")]/b').get_attribute(
+                "textContent"
             )
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if order_number.isdigit():
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 숫자가 아닙니다.")
+            if claim_count.isdigit():
+                claim_count = int(claim_count)
+            else:
+                claim_count = 0
+
+            claim_data = []
+            for i in range(1, claim_count + 1):
+                # 현재 활성화 된 tr
+                # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]')
+                claim_number = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
+                ).get_attribute("textContent")
+                order_number = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]',
+                ).get_attribute("textContent")
+                claim_data.append({"claim_number": claim_number, "order_number_list": order_number})
+                send_keys_to_driver(driver, Keys.ARROW_DOWN)
+
+            time.sleep(0.2)
+
+            result = defaultdict(list)
+
+            for item in claim_data:
+                result[item["claim_number"]].append(item["order_number_list"])
+
+            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
+
+            order_cancel_list = [
+                {"claim_number": claim_number, "order_number_list": order_number_list}
+                for claim_number, order_number_list in result_dict.items()
+            ]
 
         except Exception as e:
             print(str(e))
@@ -1141,14 +1202,18 @@ class CocoblancOrderCancelProcess:
     def kakao_shopping_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
+        claim_number = order_cancel_number["claim_number"]
+        order_number_list = order_cancel_number["order_number_list"]
 
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
+        # 주문번호 이지어드민 검증
+        for order_number in order_number_list:
+            try:
+                self.check_order_cancel_number_from_ezadmin(account, order_number)
+
+            except Exception as e:
+                print(str(e))
+                if order_number in str(e):
+                    raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
 
         try:
             driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
@@ -1158,15 +1223,20 @@ class CocoblancOrderCancelProcess:
             )
             time.sleep(0.2)
 
-            # 500개씩 보기
-            pageSize_select = Select(driver.find_element(By.XPATH, '//select[@name="pageSize"]'))
-            pageSize_select.select_by_visible_text("500개씩")
+            # 주문번호 입력
+            input_orderIdList = driver.find_element(By.XPATH, '//input[@name="orderIdList"]')
+            input_orderIdList.send_keys(order_number)
+            time.sleep(0.2)
+
+            # 검색 클릭
+            search_button = driver.find_element(By.XPATH, '//button[@type="submit" and text()="검색"]')
+            driver.execute_script("arguments[0].click();", search_button)
             time.sleep(1)
 
             # 취소 품목
             order_cancel_target = driver.find_element(
                 By.XPATH,
-                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_cancel_number}")]',
+                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_number}")]',
             )
             driver.execute_script("arguments[0].click();", order_cancel_target)
             time.sleep(1)
@@ -1891,9 +1961,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "위메프":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "카카오톡스토어":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
