@@ -1929,11 +1929,9 @@ class CocoblancOrderCancelProcess:
 
             # 아래쪽 결과
             cs_state_trs = driver.find_elements(
-                By.XPATH, '//table[contains(@id, "grid_product")]//tr[not(contains(@class, "jqgfirstrow"))]'
+                By.XPATH,
+                f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
             )
-
-            if len(cs_state_trs) == 0:
-                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
 
             for cs_state_tr in cs_state_trs:
                 driver.execute_script("arguments[0].click();", cs_state_tr)
@@ -1978,9 +1976,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "네이버":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "위메프":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
