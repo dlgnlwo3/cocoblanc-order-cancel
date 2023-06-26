@@ -1480,6 +1480,7 @@ class CocoblancOrderCancelProcess:
                     success_message = driver.find_element(By.XPATH, '//p[@class="message"]').get_attribute(
                         "textContent"
                     )
+                    print(success_message)
 
                     if not "완료되었습니다" in success_message:
                         raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
@@ -1911,21 +1912,30 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", search_button)
             time.sleep(3)
 
+            # 위쪽 결과
             try:
-                order_cancel_number_td = driver.find_element(By.XPATH, f'//td[@title="{order_cancel_number}"]')
+                order_cancel_number_td = driver.find_element(
+                    By.XPATH, f'//table[@id="grid_order"]//td[@title="{order_cancel_number}"]'
+                )
                 driver.execute_script("arguments[0].click();", order_cancel_number_td)
             except Exception as e:
-                print(str(e))
                 raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
             finally:
                 time.sleep(0.5)
 
-            product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-            product_cs_state = product_cs_state.get_attribute("textContent")
-            print(f"{account}, {order_cancel_number}, {product_cs_state}")
+            # 아래쪽 결과
+            cs_state_trs = driver.find_elements(
+                By.XPATH, '//table[contains(@id, "grid_product")]//tr[not(contains(@class, "jqgfirstrow"))]'
+            )
 
-            if not "배송전 주문취소" in product_cs_state:
-                raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
+            for cs_state_tr in cs_state_trs:
+                driver.execute_script("arguments[0].click();", cs_state_tr)
+                product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
+                product_cs_state = product_cs_state.get_attribute("textContent")
+                print(f"{account}, {order_cancel_number}, {product_cs_state}")
+
+                if not "배송전 주문취소" in product_cs_state:
+                    raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -1962,7 +1972,7 @@ class CocoblancOrderCancelProcess:
                     #     continue
 
                     # 쇼핑몰 단일 테스트용 코드
-                    if account != "카카오톡스토어":
+                    if account != "지그재그":
                         continue
 
                     print(account)
