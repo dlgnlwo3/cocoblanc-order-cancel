@@ -1835,13 +1835,17 @@ class CocoblancOrderCancelProcess:
                 # 취소비용 청구관련 구매자에게 전하실 말씀 (최대 500자) [구매자에게 전하실 말씀을 입력하십시오.]
                 seller_memo = "전체주문이 취소되어 클레임 비용을 청구하지 않습니다."
                 input_sellerMemoByCancel = driver.find_element(By.XPATH, '//input[@id="sellerMemoByCancel"]')
-                input_sellerMemoByCancel.clear()
-                input_sellerMemoByCancel.send_keys(seller_memo)
-                time.sleep(0.5)
+                try:
+                    input_sellerMemoByCancel.clear()
+                    input_sellerMemoByCancel.send_keys(seller_memo)
+                except Exception as e:
+                    print(str(e))
+                finally:
+                    time.sleep(1)
 
                 naver_order_cancel_button = driver.find_element(By.XPATH, '//a[./span[text()="저장"]]')
                 driver.execute_script("arguments[0].click();", naver_order_cancel_button)
-                time.sleep(0.5)
+                time.sleep(1)
 
                 # 클레임 비용이 0원인 건은 승인처리시 즉시 환불이 시도됩니다. 승인처리 하시겠습니까? alert
                 alert_msg = ""
@@ -1912,21 +1916,24 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", search_button)
             time.sleep(3)
 
-            # 위쪽 결과
-            try:
-                order_cancel_number_td = driver.find_element(
-                    By.XPATH, f'//table[@id="grid_order"]//td[@title="{order_cancel_number}"]'
-                )
-                driver.execute_script("arguments[0].click();", order_cancel_number_td)
-            except Exception as e:
-                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
-            finally:
-                time.sleep(0.5)
+            # # 위쪽 결과
+            # try:
+            #     order_cancel_number_td = driver.find_element(
+            #         By.XPATH, f'//table[@id="grid_order"]//td[@title="{order_cancel_number}"]'
+            #     )
+            #     driver.execute_script("arguments[0].click();", order_cancel_number_td)
+            # except Exception as e:
+            #     raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
+            # finally:
+            #     time.sleep(0.5)
 
             # 아래쪽 결과
             cs_state_trs = driver.find_elements(
                 By.XPATH, '//table[contains(@id, "grid_product")]//tr[not(contains(@class, "jqgfirstrow"))]'
             )
+
+            if len(cs_state_trs) == 0:
+                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
 
             for cs_state_tr in cs_state_trs:
                 driver.execute_script("arguments[0].click();", cs_state_tr)
@@ -1971,9 +1978,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "지그재그":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "네이버":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]

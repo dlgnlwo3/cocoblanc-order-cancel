@@ -28,7 +28,7 @@ def my_exception_hook(exctype, value, traceback):
 
 sys.excepthook = my_exception_hook
 
-# pyinstaller -n "코코블랑 취소요청 승인 v0.0.3" -w --onefile --clean "main.py" --icon "assets\ezadmin.ico"
+# pyinstaller -n "코코블랑 취소요청 승인 v0.0.4 (이지어드민 검증과정 수정 및 카카오톡스토어, 위메프 일부 수정)" -w --onefile --clean "main.py" --icon "assets\ezadmin.ico"
 
 
 class MainUI(QWidget):
@@ -90,7 +90,7 @@ class MainUI(QWidget):
         self.setLayout(vbox)
 
         # 앱 기본 설정
-        self.setWindowTitle(f"코코블랑 취소요청 승인 v0.0.3")
+        self.setWindowTitle(f"코코블랑 취소요청 승인 v0.0.4 (이지어드민 검증과정 수정, 카카오톡스토어, 위메프 일부 수정)")
         self.resize(600, 700)
         self.center()
         self.show()
