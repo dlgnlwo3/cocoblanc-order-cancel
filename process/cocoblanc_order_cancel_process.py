@@ -1979,9 +1979,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "네이버":
-                    #     continue
+                    # 쇼핑몰 단일 테스트용 코드
+                    if account != "네이버":
+                        continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]

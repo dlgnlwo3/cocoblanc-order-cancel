@@ -90,7 +90,7 @@ class MainUI(QWidget):
         self.setLayout(vbox)
 
         # 앱 기본 설정
-        self.setWindowTitle(f"코코블랑 취소요청 승인 v0.0.5 (이지어드민 검증과정 수정, 카카오톡스토어, 위메프 일부 수정)")
+        self.setWindowTitle(f"코코블랑 취소요청 승인 v0.0.5")
         self.resize(600, 700)
         self.center()
         self.show()
