@@ -1916,7 +1916,75 @@ class CocoblancOrderCancelProcess:
             driver.execute_script("arguments[0].click();", search_button)
             time.sleep(3)
 
-            # # 위쪽 결과
+            grid_order_trs = driver.find_elements(By.XPATH, '//table[@id="grid_order"]//tr[not(@class="jqgfirstrow")]')
+
+            if len(grid_order_trs) == 0:
+                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
+
+            for grid_order_tr in grid_order_trs:
+                try:
+                    driver.execute_script("arguments[0].click();", grid_order_tr)
+                    time.sleep(0.2)
+
+                    grid_product_trs = driver.find_elements(
+                        By.XPATH,
+                        f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
+                    )
+
+                    if len(grid_product_trs) == 0:
+                        raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
+
+                    for grid_product_tr in grid_product_trs:
+                        driver.execute_script("arguments[0].click();", grid_product_tr)
+                        time.sleep(0.2)
+
+                        product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
+                        product_cs_state = product_cs_state.get_attribute("textContent")
+                        print(f"{account}, {order_cancel_number}, {product_cs_state}")
+
+                        if not "배송전 주문취소" in product_cs_state:
+                            raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
+
+                except Exception as e:
+                    print(str(e))
+                    if account in str(e):
+                        raise Exception(str(e))
+
+                finally:
+                    tab_close_button = driver.find_element(By.XPATH, '//span[contains(@class, "ui-icon-close")]')
+                    driver.execute_script("arguments[0].click();", tab_close_button)
+                    time.sleep(0.2)
+
+        except Exception as e:
+            print(str(e))
+            if account in str(e):
+                raise Exception(str(e))
+
+        finally:
+            driver.refresh()
+            driver.switch_to.window(self.shop_screen_tab)
+
+    def check_order_cancel_number_from_ezadmin_for_phone(self, account, order_cancel_number):
+        driver = self.driver
+        try:
+            driver.switch_to.window(self.cs_screen_tab)
+
+            if account == "네이버" or account == "지그재그":
+                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "전화번호")]/input')
+            else:
+                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
+
+            input_order_number.clear()
+            time.sleep(0.2)
+
+            input_order_number.send_keys(order_cancel_number)
+            time.sleep(0.2)
+
+            search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
+            driver.execute_script("arguments[0].click();", search_button)
+            time.sleep(3)
+
+            # # 위쪽 테이블 -> $x('//table[@id="grid_order"]')
             # try:
             #     order_cancel_number_td = driver.find_element(
             #         By.XPATH, f'//table[@id="grid_order"]//td[@title="{order_cancel_number}"]'
@@ -1927,7 +1995,7 @@ class CocoblancOrderCancelProcess:
             # finally:
             #     time.sleep(0.5)
 
-            # 검색 결과
+            # 아래쪽 테이블 -> $x('//table[contains(@id, "grid_product")]')
             cs_state_trs = driver.find_elements(
                 By.XPATH,
                 f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
@@ -1944,6 +2012,8 @@ class CocoblancOrderCancelProcess:
 
                 if not "배송전 주문취소" in product_cs_state:
                     raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
+
+            # 아래쪽 테이블의 검색결과 탭을 닫는 버튼 -> $x('//span[contains(@class, "ui-icon-close")]')
 
         except Exception as e:
             print(str(e))
