@@ -1938,9 +1938,39 @@ class CocoblancOrderCancelProcess:
                         driver.execute_script("arguments[0].click();", grid_product_tr)
                         time.sleep(0.2)
 
-                        product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-                        product_cs_state = product_cs_state.get_attribute("textContent")
-                        print(f"{account}, {order_cancel_number}, {product_cs_state}")
+                        product_cs_state = (
+                            driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+
+                        product_name = (
+                            driver.find_element(By.XPATH, '//td[@id="di_shop_pname"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+
+                        product_option = (
+                            driver.find_element(By.XPATH, '//td[@id="di_shop_options"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+
+                        product_qty = (
+                            driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+
+                        product_order_id_seq = (
+                            driver.find_element(By.XPATH, '//td[@id="di_order_id_seq"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+
+                        print(
+                            f"{account}, {order_cancel_number}, {product_cs_state}, {product_name}, {product_option}, {product_qty}, {product_order_id_seq}"
+                        )
 
                         if not "배송전 주문취소" in product_cs_state:
                             raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
@@ -2049,9 +2079,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "위메프":
                     #     continue
 
-                    # 쇼핑몰 단일 테스트용 코드
-                    if account != "네이버":
-                        continue
+                    # # 쇼핑몰 단일 테스트용 코드
+                    # if account != "네이버":
+                    #     continue
 
                     print(account)
                     account_url = self.dict_accounts[account]["URL"]
