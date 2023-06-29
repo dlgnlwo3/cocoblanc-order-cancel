@@ -37,7 +37,7 @@ class Wemakeprice:
         self.cs_screen_tab: str = cs_screen_tab
         self.dict_account: dict = dict_account
 
-        self.shop_name = "카카오톡스토어"
+        self.shop_name = "위메프"
         self.login_url = self.dict_account["URL"]
         self.login_domain = self.dict_account["도메인"]
         self.login_id = self.dict_account["ID"]
@@ -231,30 +231,45 @@ class Wemakeprice:
                     raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
 
         try:
-            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+            driver.get("https://wpartner.wemakeprice.com/claim/cancelMain")
 
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
-            )
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="취소관리"]')))
             time.sleep(0.2)
 
-            # 주문번호 입력
-            input_orderIdList = driver.find_element(By.XPATH, '//input[@name="orderIdList"]')
-            input_orderIdList.send_keys(order_dict["주문번호"])
-            time.sleep(0.2)
+            # 300개씩 보기
+            schLimitCnt_select = Select(driver.find_element(By.XPATH, '//select[@id="schLimitCnt"]'))
+            schLimitCnt_select.select_by_visible_text("300개")
+            time.sleep(3)
 
-            # 검색 클릭
-            search_button = driver.find_element(By.XPATH, '//button[@type="submit" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
-            time.sleep(1)
-
-            # 취소 품목
+            # 취소 품목 체크박스
+            # $x('//tr[./td[text()="44807047"]]//img[contains(@onclick, "cancelBubble")]')
             order_cancel_target = driver.find_element(
-                By.XPATH,
-                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_dict["주문번호"]}")]',
+                By.XPATH, f'//tr[./td[text()="{claim_number}"]]//img[contains(@onclick, "cancelBubble")]'
             )
             driver.execute_script("arguments[0].click();", order_cancel_target)
             time.sleep(1)
+
+            # 취소승인 버튼
+            approveBtn = driver.find_element(By.XPATH, '//button[@id="approveBtn" and text()="취소승인"]')
+            driver.execute_script("arguments[0].click();", approveBtn)
+            time.sleep(0.5)
+
+            # 취소처리가 가능한 건이 없습니다. 클레임 상태를 확인해 주세요. alert
+            alert_msg = ""
+            try:
+                WebDriverWait(driver, 1).until(EC.alert_is_present())
+                alert = driver.switch_to.alert
+                alert_msg = alert.text
+            except Exception as e:
+                print(f"no alert")
+                pass
+
+            print(f"{alert_msg}")
+
+            if alert_msg != "":
+                alert.accept()
+                self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
+                raise Exception(f"{self.shop_name} {order}: {alert_msg}")
 
             # 새 창 열림
             other_tabs = [
@@ -266,15 +281,11 @@ class Wemakeprice:
                 driver.switch_to.window(order_cancel_tab)
                 time.sleep(1)
 
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
-                time.sleep(0.5)
-
-                order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
+                order_cancel_button = driver.find_element(By.XPATH, '//button[@id="approveBtn"]')
                 driver.execute_script("arguments[0].click();", order_cancel_button)
                 time.sleep(0.5)
 
-                # 취소 승인 하시겠습니까? alert
+                # 취소승인 하시겠습니까? alert
                 alert_msg = ""
                 try:
                     WebDriverWait(driver, 5).until(EC.alert_is_present())
@@ -282,21 +293,28 @@ class Wemakeprice:
                     alert_msg = alert.text
                 except Exception as e:
                     print(f"no alert")
+                    pass
 
                 print(f"{alert_msg}")
 
-                if "취소 승인 하시겠습니까" in alert_msg:
+                if "취소승인 하시겠습니까" in alert_msg:
                     alert.accept()
+                    time.sleep(0.5)
 
-                    # 정상처리 되었습니다. alert
+                    # 취소승인
                     try:
-                        WebDriverWait(driver, 10).until(EC.alert_is_present())
-                    except Exception as e:
-                        print(f"no alert")
-                        self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-                        raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+                        success_count = driver.find_element(By.XPATH, '//strong[@id="returnSuccessCnt"]').get_attribute(
+                            "textContent"
+                        )
 
-                    alert_ok_try(driver)
+                        if success_count == 0:
+                            self.log_msg.emit("성공 건수가 0입니다.")
+                            raise Exception("성공 건수가 0입니다.")
+
+                    except Exception as e:
+                        print(str(e))
+                        self.log_msg.emit(f"{self.shop_name} {order}: {str(e)}")
+                        raise Exception(f"{self.shop_name} {order}: {str(e)}")
 
                 elif alert_msg != "":
                     alert.accept()
@@ -329,7 +347,9 @@ class Wemakeprice:
         order_number = order_dict["주문번호"]
         product_name = order_dict["상품명"]
         product_option: str = order_dict["상품옵션"]
-        product_option = product_option.replace(": ", "/").replace(", ", ",")
+        product_qty = order_dict["수량"]
+        product_recv_name = order_dict["수령자명"]
+        product_recv_tel = order_dict["수령자연락처"]
 
         try:
             driver.switch_to.window(self.cs_screen_tab)
@@ -373,7 +393,7 @@ class Wemakeprice:
                             .get_attribute("textContent")
                             .strip()
                         )
-                        if not (product_name in search_product_name) or not (product_option in search_product_name):
+                        if not (product_name in search_product_name):
                             continue
 
                         search_product_option = (
@@ -392,6 +412,30 @@ class Wemakeprice:
                         if not (order_number in search_order_number):
                             continue
 
+                        search_product_qty = (
+                            driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        search_product_recv_name = (
+                            driver.find_element(By.XPATH, '//td[@id="di_recv_name"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
+
+                        # search_product_recv_tel = (
+                        #     driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]')
+                        #     .get_attribute("textContent")
+                        #     .strip()
+                        # )
+                        # if not (product_recv_tel in search_product_recv_tel):
+                        #     continue
+
                         product_cs_state = (
                             driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
                             .get_attribute("textContent")
@@ -403,7 +447,7 @@ class Wemakeprice:
                             raise Exception(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
 
                         print(
-                            f"{search_order_number}: {search_product_name}, {search_product_option}, {product_cs_state}"
+                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {product_cs_state}"
                         )
 
                 except Exception as e:
