@@ -7,6 +7,7 @@ if 1 == 1:
 
 from selenium import webdriver
 from dtos.gui_dto import GUIDto
+from dtos.product_dto import ProductDto
 
 from common.chrome import get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading, send_keys_to_driver
@@ -811,15 +812,47 @@ class CocoblancOrderCancelProcess:
             for i in range(1, claim_count + 1):
                 # 현재 활성화 된 tr
                 # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]')
+                product_dto = ProductDto()
+
                 claim_number = driver.find_element(
                     By.XPATH,
                     '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
                 ).get_attribute("textContent")
+
                 order_number = driver.find_element(
                     By.XPATH,
                     '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]',
                 ).get_attribute("textContent")
-                claim_data.append({"claim_number": claim_number, "order_number_list": order_number})
+                product_dto.order_number = order_number
+
+                product_name = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_14_")]',
+                ).get_attribute("textContent")
+                product_dto.product_name = product_name
+
+                product_option = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_15_")]',
+                ).get_attribute("textContent")
+                product_dto.product_option = product_option
+
+                product_recv_name = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_25_")]',
+                ).get_attribute("textContent")
+                product_dto.product_recv_name = product_recv_name
+
+                product_recv_tel = driver.find_element(
+                    By.XPATH,
+                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_26_")]',
+                ).get_attribute("textContent")
+                product_dto.product_recv_tel = product_recv_tel
+
+                product_dto.to_print()
+
+                claim_data.append({"claim_number": claim_number, "order_number_list": product_dto.get_dict()})
+
                 send_keys_to_driver(driver, Keys.ARROW_DOWN)
 
             time.sleep(0.2)
@@ -1896,7 +1929,7 @@ class CocoblancOrderCancelProcess:
             else:
                 raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
-    def check_order_cancel_number_from_ezadmin(self, account, order_cancel_number):
+    def check_order_cancel_number_from_ezadmin(self, account, order_cancel_number: dict):
         driver = self.driver
         try:
             driver.switch_to.window(self.cs_screen_tab)
@@ -1909,7 +1942,7 @@ class CocoblancOrderCancelProcess:
             input_order_number.clear()
             time.sleep(0.2)
 
-            input_order_number.send_keys(order_cancel_number)
+            input_order_number.send_keys(order_cancel_number["주문번호"])
             time.sleep(0.2)
 
             search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
@@ -1938,23 +1971,23 @@ class CocoblancOrderCancelProcess:
                         driver.execute_script("arguments[0].click();", grid_product_tr)
                         time.sleep(0.2)
 
-                        product_cs_state = (
-                            driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-
                         product_name = (
                             driver.find_element(By.XPATH, '//td[@id="di_shop_pname"]')
                             .get_attribute("textContent")
                             .strip()
                         )
+                        if (order_cancel_number["상품명"] in product_name) or (
+                            order_cancel_number["상품옵션"] in product_name
+                        ):
+                            pass
 
                         product_option = (
                             driver.find_element(By.XPATH, '//td[@id="di_shop_options"]')
                             .get_attribute("textContent")
                             .strip()
                         )
+                        if order_cancel_number["상품옵션"] in product_option:
+                            pass
 
                         product_qty = (
                             driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
@@ -1970,6 +2003,12 @@ class CocoblancOrderCancelProcess:
 
                         print(
                             f"{account}, {order_cancel_number}, {product_cs_state}, {product_name}, {product_option}, {product_qty}, {product_order_id_seq}"
+                        )
+
+                        product_cs_state = (
+                            driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
+                            .get_attribute("textContent")
+                            .strip()
                         )
 
                         if not "배송전 주문취소" in product_cs_state:
@@ -1994,66 +2033,6 @@ class CocoblancOrderCancelProcess:
             driver.refresh()
             driver.switch_to.window(self.shop_screen_tab)
 
-    def check_order_cancel_number_from_ezadmin_for_phone(self, account, order_cancel_number):
-        driver = self.driver
-        try:
-            driver.switch_to.window(self.cs_screen_tab)
-
-            if account == "네이버" or account == "지그재그":
-                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "전화번호")]/input')
-            else:
-                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
-
-            input_order_number.clear()
-            time.sleep(0.2)
-
-            input_order_number.send_keys(order_cancel_number)
-            time.sleep(0.2)
-
-            search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
-            time.sleep(3)
-
-            # # 위쪽 테이블 -> $x('//table[@id="grid_order"]')
-            # try:
-            #     order_cancel_number_td = driver.find_element(
-            #         By.XPATH, f'//table[@id="grid_order"]//td[@title="{order_cancel_number}"]'
-            #     )
-            #     driver.execute_script("arguments[0].click();", order_cancel_number_td)
-            # except Exception as e:
-            #     raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
-            # finally:
-            #     time.sleep(0.5)
-
-            # 아래쪽 테이블 -> $x('//table[contains(@id, "grid_product")]')
-            cs_state_trs = driver.find_elements(
-                By.XPATH,
-                f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
-            )
-
-            if len(cs_state_trs) == 0:
-                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
-
-            for cs_state_tr in cs_state_trs:
-                driver.execute_script("arguments[0].click();", cs_state_tr)
-                product_cs_state = driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-                product_cs_state = product_cs_state.get_attribute("textContent")
-                print(f"{account}, {order_cancel_number}, {product_cs_state}")
-
-                if not "배송전 주문취소" in product_cs_state:
-                    raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
-
-            # 아래쪽 테이블의 검색결과 탭을 닫는 버튼 -> $x('//span[contains(@class, "ui-icon-close")]')
-
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception(str(e))
-
-        finally:
-            driver.refresh()
-            driver.switch_to.window(self.shop_screen_tab)
-
     # 전체작업 시작
     def work_start(self):
         driver = self.driver
@@ -2063,10 +2042,11 @@ class CocoblancOrderCancelProcess:
         try:
             self.dict_accounts = self.get_dict_account()
 
-            # 로그인
+            # 이지어드민 로그인
             self.ezadmin_login()
 
-            # cs창 진입
+            # 이지어드민 cs창 생성
+            # self.cs_screen_tab
             self.switch_to_cs_screen()
 
             # 쇼핑몰의 수 만큼 작업
@@ -2080,7 +2060,7 @@ class CocoblancOrderCancelProcess:
                     #     continue
 
                     # # 쇼핑몰 단일 테스트용 코드
-                    # if account != "네이버":
+                    # if account != "티몬":
                     #     continue
 
                     print(account)
