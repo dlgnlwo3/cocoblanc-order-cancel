@@ -119,27 +119,92 @@ class Wemakeprice:
                 '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]',
             )
 
+            claim_data = []
             for claim_number in claim_number_list:
                 claim_number = claim_number.get_attribute("textContent")
 
-                claim_tr_list = driver.find_element(By.XPATH, f'//tr[./td[text()="{claim_number}"][not(@title)]]')
+                # $x('//tr[./td[text()="44998480"][not(@title)]]')
+                claim_tr_list = driver.find_elements(By.XPATH, f'//tr[./td[text()="{claim_number}"][not(@title)]]')
 
-                # 클레임번호가 포함되어있는 주문번호 목록
-                # $x('//tr[./td[text()="44807047"][not(@title)]]/td[contains(@style, "underline")][1]')
-                order_number_list = driver.find_elements(
-                    By.XPATH,
-                    f'//tr[./td[text()="{claim_number}"][not(@title)]]/td[contains(@style, "underline")][1]',
-                )
+                claim_tr: webdriver.Chrome._web_element_cls
+                for claim_tr in claim_tr_list:
+                    product_dto = ProductDto()
 
-                claim_order_number_list = []
-                for order_number in order_number_list:
-                    order_number = order_number.get_attribute("textContent")
-                    if order_number.isdigit():
-                        claim_order_number_list.append(order_number)
-                    else:
-                        print(f"{order_number}는 숫자가 아닙니다.")
+                    order_number = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][1]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.order_number = order_number
 
-                order_list.append({"claim_number": claim_number, "order_number_list": claim_order_number_list})
+                    product_name = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][2]/following-sibling::td[1]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.product_name = product_name
+
+                    product_option = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][2]/following-sibling::td[2]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.product_option = product_option
+
+                    product_qty = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][2]/following-sibling::td[3]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.product_qty = product_qty
+
+                    product_recv_name = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][2]/following-sibling::td[@align="center" and @valign="middle"][3]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.product_recv_name = product_recv_name
+
+                    product_recv_tel = (
+                        claim_tr.find_element(
+                            By.XPATH,
+                            f'./td[contains(@style, "underline")][2]/following-sibling::td[@align="center" and @valign="middle"][4]',
+                        )
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+                    product_dto.product_recv_tel = product_recv_tel
+
+                    product_dto.to_print()
+
+                    claim_data.append({"claim_number": claim_number, "order_number_list": product_dto.get_dict()})
+
+            result = defaultdict(list)
+
+            for item in claim_data:
+                result[item["claim_number"]].append(item["order_number_list"])
+
+            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
+
+            order_list = [
+                {"claim_number": claim_number, "order_number_list": order_number_list}
+                for claim_number, order_number_list in result_dict.items()
+            ]
 
         except Exception as e:
             print(str(e))
