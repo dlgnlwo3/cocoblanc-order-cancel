@@ -467,6 +467,8 @@ class KakaoTalkStore:
 
             order_list = self.get_order_list()
 
+            self.log_msg.emit(f"{self.shop_name}: {len(order_list)}개의 주문번호(묶음번호)를 발견했습니다.")
+
             for order in order_list:
                 try:
                     self.order_cancel(order)
