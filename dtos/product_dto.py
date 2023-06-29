@@ -10,6 +10,7 @@ class ProductDto:
         self.__order_number = ""
         self.__product_name = ""
         self.__product_option = ""
+        self.__product_qty = ""
         self.__product_recv_name = ""
         self.__product_recv_tel = ""
 
@@ -38,6 +39,14 @@ class ProductDto:
         self.__product_option = value
 
     @property
+    def product_qty(self):  # getter
+        return self.__product_qty
+
+    @product_qty.setter
+    def product_qty(self, value):  # setter
+        self.__product_qty = value
+
+    @property
     def product_recv_name(self):  # getter
         return self.__product_recv_name
 
@@ -58,6 +67,7 @@ class ProductDto:
             "주문번호": self.order_number,
             "상품명": self.product_name,
             "상품옵션": self.product_option,
+            "수량": self.product_qty,
             "수령자명": self.product_recv_name,
             "수령자연락처": self.product_recv_tel,
         }
@@ -66,5 +76,6 @@ class ProductDto:
         print("주문번호: ", self.order_number)
         print("상품명: ", self.product_name)
         print("상품옵션: ", self.product_option)
+        print("수량: ", self.product_qty)
         print("수령자명: ", self.product_recv_name)
         print("수령자연락처: ", self.product_recv_tel)

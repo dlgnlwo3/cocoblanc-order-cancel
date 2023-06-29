@@ -35,6 +35,7 @@ from collections import defaultdict
 
 from process.ezadmin import Ezadmin
 from process.kakaotalk_store import KakaoTalkStore
+from process.wemakeprice import Wemakeprice
 
 
 class CocoblancOrderCancelProcess:
@@ -1624,10 +1625,15 @@ class CocoblancOrderCancelProcess:
                     if account == "이지어드민":
                         continue
 
-                    if account == "카카오톡스토어":
+                    # if account == "카카오톡스토어":
+                    #     dict_account = self.dict_accounts[account]
+                    #     kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     kakaotalk_store.work_start()
+
+                    if account == "위메프":
                         dict_account = self.dict_accounts[account]
-                        kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        kakaotalk_store.work_start()
+                        wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        wemakeprice.work_start()
 
                 except Exception as e:
                     print(str(e))

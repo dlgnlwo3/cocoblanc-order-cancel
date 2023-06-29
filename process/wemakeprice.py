@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 
-class KakaoTalkStore:
+class Wemakeprice:
     def __init__(self, log_msg, driver, cs_screen_tab, dict_account):
         self.log_msg: SignalInstance = log_msg
         self.driver: webdriver.Chrome = driver
@@ -49,182 +49,97 @@ class KakaoTalkStore:
         driver = self.driver
 
         try:
-            # 이전 로그인 세션이 남아있을 경우 해당 web element가 존재하지 않습니다.
-            WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, '//button[@type="submit"][contains(text(), "로그인")]'))
-            )
-            time.sleep(1)
+            # 이전 로그인 세션이 남아있을 경우 바로 스토어 화면으로 이동합니다.
+            WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//input[@name="loginid"]')))
+            time.sleep(2)
 
         except Exception as e:
-            print(f"{self.shop_name} 로그인 화면이 아닙니다.")
+            pass
 
         try:
             driver.implicitly_wait(1)
 
-            login_id = self.dict_account["ID"]
-            login_pw = self.dict_account["PW"]
-
-            id_input = driver.find_element(By.XPATH, '//input[@name="loginKey"]')
+            id_input = driver.find_element(By.XPATH, '//input[@name="loginid"]')
             time.sleep(0.2)
             id_input.click()
             time.sleep(0.2)
             id_input.clear()
             time.sleep(0.2)
-            id_input.send_keys(login_id)
+            id_input.send_keys(self.login_id)
 
-            pw_input = driver.find_element(By.XPATH, '//input[@name="password"]')
+            pw_input = driver.find_element(By.XPATH, '//input[@name="loginpassword"]')
             time.sleep(0.2)
             pw_input.click()
             time.sleep(0.2)
             pw_input.clear()
             time.sleep(0.2)
-            pw_input.send_keys(login_pw)
+            pw_input.send_keys(self.login_pw)
 
-            login_button = driver.find_element(By.XPATH, '//button[@type="submit"][contains(text(), "로그인")]')
+            login_button = driver.find_element(By.XPATH, '//button[contains(text(), "로그인")]')
+            time.sleep(0.2)
             login_button.click()
-            time.sleep(1)
+            time.sleep(0.2)
 
         except Exception as e:
-            print(f"{self.shop_name} 로그인 정보 입력 실패")
+            print("로그인 정보 입력 실패")
 
         finally:
             driver.implicitly_wait(self.default_wait)
 
         try:
             WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//h1[./a[./img[@alt="톡스토어 판매자센터"]]]'))
+                EC.visibility_of_element_located((By.XPATH, '//strong[contains(text(), "취소신청")]'))
             )
             time.sleep(0.5)
 
         except Exception as e:
-            self.log_msg.emit(f"카카오톡스토어 로그인 실패")
-            raise Exception("카카오톡스토어 로그인 실패")
-
-        # 각종 팝업창 닫기
-        try:
-            popup_close_button = driver.find_element(
-                By.XPATH, '//div[@class="popup-foot"]//button[./span[contains(text(), "닫기")]]'
-            )
-            driver.execute_script("arguments[0].click();", popup_close_button)
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("popup not found")
+            self.log_msg.emit(f"위메프 로그인 실패")
+            print(e)
+            raise Exception("위메프 로그인 실패")
 
     def get_order_list(self):
         driver = self.driver
 
         order_list = []
         try:
-            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+            driver.get("https://wpartner.wemakeprice.com/claim/cancelMain")
 
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
-            )
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="취소관리"]')))
             time.sleep(0.2)
 
-            # 500개씩 보기
-            pageSize_select = Select(driver.find_element(By.XPATH, '//select[@name="pageSize"]'))
-            pageSize_select.select_by_visible_text("500개씩")
-            time.sleep(1)
-
-            try:
-                driver.implicitly_wait(1)
-                not_found_message = driver.find_element(By.XPATH, '//div[text()="목록이 없습니다."]').get_attribute(
-                    "textContent"
-                )
-                print(not_found_message)
-                return order_list
-
-            except Exception as e:
-                pass
-
-            finally:
-                driver.implicitly_wait(self.default_wait)
+            # 300개씩 보기
+            schLimitCnt_select = Select(driver.find_element(By.XPATH, '//select[@id="schLimitCnt"]'))
+            schLimitCnt_select.select_by_visible_text("300개")
+            time.sleep(3)
 
             # 클레임번호 목록
-            first_line_in_table = driver.find_element(
+            # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]')
+            claim_number_list = driver.find_elements(
                 By.XPATH,
-                '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding"))]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
+                '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]',
             )
-            driver.execute_script("arguments[0].click();", first_line_in_table)
-            time.sleep(0.2)
 
-            # 목록의 갯수
-            claim_count = driver.find_element(By.XPATH, '//div[contains(@id, "AX_gridStatus")]/b').get_attribute(
-                "textContent"
-            )
-            if claim_count.isdigit():
-                claim_count = int(claim_count)
-            else:
-                claim_count = 0
+            for claim_number in claim_number_list:
+                claim_number = claim_number.get_attribute("textContent")
 
-            claim_data = []
-            for i in range(1, claim_count + 1):
-                # 현재 활성화 된 tr
-                # $x('//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]')
-                product_dto = ProductDto()
+                claim_tr_list = driver.find_element(By.XPATH, f'//tr[./td[text()="{claim_number}"][not(@title)]]')
 
-                claim_number = driver.find_element(
+                # 클레임번호가 포함되어있는 주문번호 목록
+                # $x('//tr[./td[text()="44807047"][not(@title)]]/td[contains(@style, "underline")][1]')
+                order_number_list = driver.find_elements(
                     By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_1_")]',
-                ).get_attribute("textContent")
+                    f'//tr[./td[text()="{claim_number}"][not(@title)]]/td[contains(@style, "underline")][1]',
+                )
 
-                order_number = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_3_")]',
-                ).get_attribute("textContent")
-                product_dto.order_number = order_number
+                claim_order_number_list = []
+                for order_number in order_number_list:
+                    order_number = order_number.get_attribute("textContent")
+                    if order_number.isdigit():
+                        claim_order_number_list.append(order_number)
+                    else:
+                        print(f"{order_number}는 숫자가 아닙니다.")
 
-                product_name = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_14_")]',
-                ).get_attribute("textContent")
-                product_dto.product_name = product_name
-
-                product_option = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_15_")]',
-                ).get_attribute("textContent")
-                product_dto.product_option = product_option
-
-                product_qty = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_16_")]',
-                ).get_attribute("textContent")
-                product_dto.product_qty = product_qty
-
-                product_recv_name = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_25_")]',
-                ).get_attribute("textContent")
-                product_dto.product_recv_name = product_recv_name
-
-                product_recv_tel = driver.find_element(
-                    By.XPATH,
-                    '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_26_")]',
-                ).get_attribute("textContent")
-                product_dto.product_recv_tel = product_recv_tel
-
-                product_dto.to_print()
-
-                claim_data.append({"claim_number": claim_number, "order_number_list": product_dto.get_dict()})
-
-                send_keys_to_driver(driver, Keys.ARROW_DOWN)
-
-            time.sleep(0.2)
-
-            result = defaultdict(list)
-
-            for item in claim_data:
-                result[item["claim_number"]].append(item["order_number_list"])
-
-            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
-
-            order_list = [
-                {"claim_number": claim_number, "order_number_list": order_number_list}
-                for claim_number, order_number_list in result_dict.items()
-            ]
+                order_list.append({"claim_number": claim_number, "order_number_list": claim_order_number_list})
 
         except Exception as e:
             print(str(e))
@@ -350,7 +265,6 @@ class KakaoTalkStore:
         product_name = order_dict["상품명"]
         product_option: str = order_dict["상품옵션"]
         product_option = product_option.replace(": ", "/").replace(", ", ",")
-        product_qty = order_dict["수량"]
 
         try:
             driver.switch_to.window(self.cs_screen_tab)
@@ -405,14 +319,6 @@ class KakaoTalkStore:
                         if not (product_option in search_product_option):
                             continue
 
-                        search_product_qty = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (product_qty in search_product_qty):
-                            continue
-
                         search_order_number = (
                             driver.find_element(By.XPATH, '//td[@id="di_order_id"]')
                             .get_attribute("textContent")
@@ -432,7 +338,7 @@ class KakaoTalkStore:
                             raise Exception(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
 
                         print(
-                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {product_cs_state}"
+                            f"{search_order_number}: {search_product_name}, {search_product_option}, {product_cs_state}"
                         )
 
                 except Exception as e:
@@ -456,7 +362,7 @@ class KakaoTalkStore:
 
     def work_start(self):
         driver = self.driver
-        print(f"KakaoTalkStore: work_start")
+        print(f"Wemakeprice: work_start")
 
         try:
             driver.execute_script(f"window.open('{self.login_url}');")
