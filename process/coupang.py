@@ -199,7 +199,7 @@ class Coupang:
 
                     product_dto.to_print()
 
-                    claim_data.append({"claim_number": order_number, "order_number_list": product_dto.get_dict()})
+                    claim_data.insert(0, {"claim_number": order_number, "order_number_list": product_dto.get_dict()})
 
             result = defaultdict(list)
 
@@ -238,84 +238,68 @@ class Coupang:
                     raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
 
         try:
-            driver.get("https://b-flow.co.kr/order/cancels")
+            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
 
             WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "취소 관리")]'))
+                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
             )
+            time.sleep(0.5)
+
+            # 검색 열기
+            open_search_button = driver.find_element(By.XPATH, '//button[contains(text(), "검색 열기")]')
+            driver.execute_script("arguments[0].click();", open_search_button)
             time.sleep(0.2)
 
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-
-            # 취소요청 x 건 클릭
-            # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
-            cancel_request_link = driver.find_element(
-                By.XPATH,
-                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
-            )
-            driver.execute_script("arguments[0].click();", cancel_request_link)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            # 검색조건 -> 주문번호
+            search_option_select = Select(driver.find_element(By.XPATH, '//select[./option[contains(text(), "주문번호")]]'))
+            search_option_select.select_by_value("orderId")
             time.sleep(0.2)
 
-            # 500개씩 보기
-            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
-            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
-            driver.execute_script("arguments[0].click();", option_span)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
+            # 주문번호 입력
+            input_keyword = driver.find_element(By.XPATH, '//span[contains(@class, "search-words-input")]//input')
+            input_keyword.send_keys(claim_number)
             time.sleep(0.2)
+
+            # 검색 클릭
+            search_submit_button = driver.find_element(By.XPATH, '//button[contains(text(), "검색") and @type="submit"]')
+            driver.execute_script("arguments[0].click();", search_submit_button)
+            time.sleep(2)
 
             # 취소 품목 체크박스
             # '//tr[./td[.//span[contains(text(), "2023061616868779870")]]]//input[@type="checkbox"]'
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH, f'//tr[./td[.//span[contains(text(), "{claim_number}")]]]//input[@type="checkbox"]'
-            )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
+            try:
+                order_cancel_target_checkbox = driver.find_element(
+                    By.XPATH, f'//tr[.//a[contains(text(), "{claim_number}")]]/td//input[@type="checkbox"]'
+                )
+                driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
+                time.sleep(0.2)
+            except Exception as e:
+                print(str(e))
+                self.log_msg.emit(f"{self.shop_name} {order}: 검색 결과가 없습니다.")
+                raise Exception(f"{self.shop_name} {order}: 검색 결과가 없습니다.")
 
-            # 취소완료 버튼
-            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
+            # 출고중지완료 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "출고중지완료")]')
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
-            # 1개의 항목을 취소완료 처리하시겠습니까? alert
-            alert_msg = ""
+            # modal창: 하기 1건을 출고중지 완료 하시겠습니까? 출고중지완료하시면 환불이 완료됩니다. or 상품을 먼저 선택해 주세요.
+            # $x('//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]')
             try:
-                WebDriverWait(driver, 5).until(EC.alert_is_present())
-                alert = driver.switch_to.alert
-                alert_msg = alert.text
+                coupang_order_cancel_button = driver.find_element(
+                    By.XPATH,
+                    '//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]//div[@class="footer"]/button[contains(text(), "완료")]',
+                )
+                driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
+                time.sleep(2)
+
+                # 별다른 메시지 없이 처리됨
+                self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
+
             except Exception as e:
-                print(f"no alert")
-                self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-                raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-
-            print(f"{alert_msg}")
-
-            if "취소완료 처리하시겠습니까" in alert_msg:
-                alert.accept()
-                time.sleep(1)
-
-                # [취소번호: xxxxxxxx] 완료 처리되었습니다.
-                try:
-                    cancel_success_message = driver.find_element(
-                        By.XPATH, '//li[contains(text(), "완료 처리되었습니다") and contains(text(), "취소번호")]'
-                    ).get_attribute("textContent")
-                    print(cancel_success_message)
-
-                except Exception as e:
-                    print(str(e))
-                    self.log_msg.emit(f"{self.shop_name} {order}: 취소 성공 메시지를 찾지 못했습니다.")
-                    raise Exception(f"{self.shop_name} {order}: 취소 성공 메시지를 찾지 못했습니다.")
-
-            elif alert_msg != "":
-                alert.dismiss()
-                self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
-                raise Exception(f"{self.shop_name} {order}: {alert_msg}")
-
-            else:
-                self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-                raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-
-            self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
+                print(str(e))
+                self.log_msg.emit(f"{self.shop_name} {order}: 취소 성공 메시지를 찾지 못했습니다.")
+                raise Exception(f"{self.shop_name} {order}: 취소 성공 메시지를 찾지 못했습니다.")
 
         except Exception as e:
             print(str(e))
@@ -326,7 +310,9 @@ class Coupang:
         driver = self.driver
 
         order_number = order_dict["주문번호"]
-        order_detail_number = order_dict["주문상세번호"]
+        product_name_list = order_dict["상품명"]
+        product_recv_name = order_dict["수령자명"]
+        product_recv_tel = order_dict["수령자연락처"]
 
         try:
             driver.switch_to.window(self.cs_screen_tab)
@@ -376,6 +362,8 @@ class Coupang:
                             .get_attribute("textContent")
                             .strip()
                         )
+                        if not (search_product_option in product_name_list):
+                            continue
 
                         search_order_number = (
                             driver.find_element(By.XPATH, '//td[@id="di_order_id"]')
@@ -390,8 +378,6 @@ class Coupang:
                             .get_attribute("textContent")
                             .strip()
                         )
-                        if not (order_detail_number in search_order_detail_number):
-                            continue
 
                         search_product_qty = (
                             driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
@@ -404,12 +390,14 @@ class Coupang:
                             .get_attribute("textContent")
                             .strip()
                         )
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
 
-                        # search_product_recv_tel = (
-                        #     driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]')
-                        #     .get_attribute("textContent")
-                        #     .strip()
-                        # )
+                        search_product_recv_tel = (
+                            driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
                         # if not (product_recv_tel in search_product_recv_tel):
                         #     continue
 
