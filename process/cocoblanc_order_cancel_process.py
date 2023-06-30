@@ -39,6 +39,7 @@ from process.wemakeprice import Wemakeprice
 from process.zigzag import Zigzag
 from process.bflow import Bflow
 from process.coupang import Coupang
+from process.eleven_street import ElevenStreet
 
 
 class CocoblancOrderCancelProcess:
@@ -75,8 +76,6 @@ class CocoblancOrderCancelProcess:
     def shop_login(self, account):
         if account == "티몬":
             self.ticketmonster_login()
-        elif account == "11번가":
-            self.eleven_street_login()
         elif account == "네이버":
             self.naver_login()
 
@@ -155,61 +154,6 @@ class CocoblancOrderCancelProcess:
         finally:
             driver.switch_to.window(self.shop_screen_tab)
 
-    def eleven_street_login(self):
-        driver = self.driver
-
-        try:
-            # 이전 로그인 세션이 남아있을 경우 바로 스토어 선택 화면으로 이동합니다.
-            WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, '//h1[contains(text(), "셀러오피스")]'))
-            )
-            time.sleep(2)
-
-        except Exception as e:
-            pass
-
-        try:
-            driver.implicitly_wait(1)
-
-            login_id = self.dict_accounts["11번가"]["ID"]
-            login_pw = self.dict_accounts["11번가"]["PW"]
-
-            id_input = driver.find_element(By.XPATH, '//input[@id="loginName"]')
-            id_input.click()
-            time.sleep(0.2)
-            id_input.clear()
-            time.sleep(0.2)
-            id_input.send_keys(login_id)
-
-            pw_input = driver.find_element(By.XPATH, '//input[@id="passWord"]')
-            pw_input.click()
-            time.sleep(0.2)
-            pw_input.clear()
-            time.sleep(0.2)
-            pw_input.send_keys(login_pw)
-
-            login_button = driver.find_element(By.XPATH, '//button[@value="로그인"]')
-            time.sleep(0.2)
-            login_button.click()
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("로그인 정보 입력 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            main_page_link = driver.find_element(By.XPATH, '//h1[./a[contains(text(), "Seller Office")]]')
-
-        except Exception as e:
-            self.log_msg.emit("11번가 로그인 실패")
-            print(e)
-            raise Exception("11번가 로그인 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
     def ticketmonster_login(self):
         driver = self.driver
 
@@ -283,8 +227,6 @@ class CocoblancOrderCancelProcess:
     def get_shop_order_cancel_list(self, account):
         if account == "티몬":
             order_cancel_list = self.get_ticketmonster_order_cancel_list()
-        elif account == "11번가":
-            order_cancel_list = self.get_eleven_street_order_cancel_list()
         elif account == "네이버":
             order_cancel_list = self.get_naver_order_cancel_list()
 
@@ -318,54 +260,6 @@ class CocoblancOrderCancelProcess:
                     order_cancel_list.append(order_number)
                 else:
                     print(f"{order_number}는 숫자가 아닙니다.")
-
-        except Exception as e:
-            print(str(e))
-
-        finally:
-            print(f"order_cancel_list: {order_cancel_list}")
-
-        return order_cancel_list
-
-    def get_eleven_street_order_cancel_list(self):
-        driver = self.driver
-
-        order_cancel_list = []
-
-        try:
-            APIBot = ElevenStreetAPI(self.dict_accounts["11번가"]["API_KEY"])
-
-            driver.get("https://soffice.11st.co.kr/view/6209?preViewCode=D")
-
-            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
-            time.sleep(0.5)
-
-            # 조회 기간은 최대 30일 YYYYMMDDhhmm  'strftime("%Y%m%d%H%M")' 활용
-            now = datetime.now()
-            startTime = str((now - timedelta(days=30)).strftime("%Y%m%d")) + "0000"
-            endTime = str(now.strftime("%Y%m%d")) + "2359"
-
-            # 취소처리 API에는 ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 총 세가지 정보가 필요하기 때문에 세개의 정보를 수집해야 함.
-            cancelorders = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
-
-            try:
-                if type(cancelorders["ns2:orders"]["ns2:order"]) == dict:
-                    api_cancelorder_list = [cancelorders["ns2:orders"]["ns2:order"]]
-                else:
-                    api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
-
-                for api_cancelorder in api_cancelorder_list:
-                    order_cancel_list.insert(
-                        0,
-                        {
-                            "ordPrdCnSeq": api_cancelorder["ordPrdCnSeq"],
-                            "ordNo": api_cancelorder["ordNo"],
-                            "ordPrdSeq": api_cancelorder["ordPrdSeq"],
-                        },
-                    )
-
-            except Exception as e:
-                print(str(e))
 
         except Exception as e:
             print(str(e))
@@ -416,10 +310,6 @@ class CocoblancOrderCancelProcess:
                     self.ticketmonster_order_cancel(account, order_cancel_number)
                 elif account == "지그재그":
                     self.zigzag_order_cancel(account, order_cancel_number)
-                elif account == "브리치":
-                    self.bflow_order_cancel(account, order_cancel_number)
-                elif account == "쿠팡":
-                    self.coupang_order_cancel(account, order_cancel_number)
                 elif account == "11번가":
                     self.eleven_street_order_cancel(account, order_cancel_number)
                 elif account == "네이버":
@@ -1028,8 +918,8 @@ class CocoblancOrderCancelProcess:
                     #     wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     wemakeprice.work_start()
 
-                    if account == "티몬":
-                        pass
+                    # if account == "티몬":
+                    #     pass
 
                     # if account == "지그재그":
                     #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
@@ -1039,12 +929,13 @@ class CocoblancOrderCancelProcess:
                     #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     bflow.work_start()
 
-                    if account == "쿠팡":
-                        coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        coupang.work_start()
+                    # if account == "쿠팡":
+                    #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     coupang.work_start()
 
                     if account == "11번가":
-                        pass
+                        eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        eleven_street.work_start()
 
                     if account == "네이버":
                         pass
