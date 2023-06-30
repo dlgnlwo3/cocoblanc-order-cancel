@@ -133,6 +133,9 @@ class Zigzag:
             # $x('//tr[contains(@class, "TableRow")]/td[@rowspan]/button')
             claim_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[@rowspan]/button')
 
+            # 옵션 td
+            # $x('//td[.//div/span[contains(text(), "- ")]]')
+
             claim_data = []
             for claim_number in claim_number_list:
                 claim_number = claim_number.get_attribute("textContent")

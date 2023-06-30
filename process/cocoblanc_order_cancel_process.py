@@ -310,8 +310,6 @@ class CocoblancOrderCancelProcess:
                     self.ticketmonster_order_cancel(account, order_cancel_number)
                 elif account == "지그재그":
                     self.zigzag_order_cancel(account, order_cancel_number)
-                elif account == "11번가":
-                    self.eleven_street_order_cancel(account, order_cancel_number)
                 elif account == "네이버":
                     self.naver_order_cancel(account, order_cancel_number)
 
@@ -636,45 +634,6 @@ class CocoblancOrderCancelProcess:
             else:
                 raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
-    def eleven_street_order_cancel(self, account, order_cancel_number):
-        driver = self.driver
-
-        # 11번가 order_cancel_number -> ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 세개의 정보가 담겨있음
-        # 주문번호 이지어드민 검증
-        ordPrdCnSeq = order_cancel_number["ordPrdCnSeq"]
-        ordNo = order_cancel_number["ordNo"]
-        ordPrdSeq = order_cancel_number["ordPrdSeq"]
-
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, ordNo)
-
-        except Exception as e:
-            print(str(e))
-            if ordNo in str(e):
-                raise Exception((str(e)))
-
-        try:
-            APIBot = ElevenStreetAPI(self.dict_accounts["11번가"]["API_KEY"])
-
-            driver.get("https://soffice.11st.co.kr/view/6209?preViewCode=D")
-
-            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
-            time.sleep(0.5)
-
-            ResultOrder = asyncio.run(APIBot.cancelreqconf_from_ordInfo(ordPrdCnSeq, ordNo, ordPrdSeq))
-
-            if ResultOrder["ResultOrder"]["result_code"] != "0":
-                raise Exception(f"{account} {ordNo}: 취소 승인 메시지를 찾지 못했습니다.")
-
-            self.log_msg.emit(f"{account} {ordNo}: 취소 완료")
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-            else:
-                raise Exception(f"{account} {ordNo}: 해당 주문이 존재하지 않습니다.")
-
     def naver_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
@@ -921,9 +880,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "티몬":
                     #     pass
 
-                    # if account == "지그재그":
-                    #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     zigzag.work_start()
+                    if account == "지그재그":
+                        zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        zigzag.work_start()
 
                     # if account == "브리치":
                     #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
@@ -933,9 +892,9 @@ class CocoblancOrderCancelProcess:
                     #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     coupang.work_start()
 
-                    if account == "11번가":
-                        eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        eleven_street.work_start()
+                    # if account == "11번가":
+                    #     eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     eleven_street.work_start()
 
                     if account == "네이버":
                         pass
