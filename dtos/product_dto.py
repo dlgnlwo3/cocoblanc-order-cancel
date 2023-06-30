@@ -8,6 +8,7 @@ if 1 == 1:
 class ProductDto:
     def __init__(self):
         self.__order_number = ""
+        self.__order_detail_number = ""
         self.__product_name = ""
         self.__product_option = ""
         self.__product_qty = ""
@@ -21,6 +22,14 @@ class ProductDto:
     @order_number.setter
     def order_number(self, value):  # setter
         self.__order_number = value
+
+    @property
+    def order_detail_number(self):  # getter
+        return self.__order_detail_number
+
+    @order_detail_number.setter
+    def order_detail_number(self, value):  # setter
+        self.__order_detail_number = value
 
     @property
     def product_name(self):  # getter
@@ -65,6 +74,7 @@ class ProductDto:
     def get_dict(self) -> dict:
         return {
             "주문번호": self.order_number,
+            "주문상세번호": self.order_detail_number,
             "상품명": self.product_name,
             "상품옵션": self.product_option,
             "수량": self.product_qty,
@@ -74,6 +84,7 @@ class ProductDto:
 
     def to_print(self):
         print("주문번호: ", self.order_number)
+        print("주문상세번호: ", self.order_detail_number)
         print("상품명: ", self.product_name)
         print("상품옵션: ", self.product_option)
         print("수량: ", self.product_qty)

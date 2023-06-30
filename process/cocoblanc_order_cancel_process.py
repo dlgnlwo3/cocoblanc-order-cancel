@@ -36,6 +36,8 @@ from collections import defaultdict
 from process.ezadmin import Ezadmin
 from process.kakaotalk_store import KakaoTalkStore
 from process.wemakeprice import Wemakeprice
+from process.zigzag import Zigzag
+from process.bflow import Bflow
 
 
 class CocoblancOrderCancelProcess:
@@ -72,10 +74,6 @@ class CocoblancOrderCancelProcess:
     def shop_login(self, account):
         if account == "티몬":
             self.ticketmonster_login()
-        elif account == "지그재그":
-            self.zigzag_login()
-        elif account == "브리치":
-            self.bflow_login()
         elif account == "쿠팡":
             self.coupang_login()
         elif account == "11번가":
@@ -158,86 +156,6 @@ class CocoblancOrderCancelProcess:
         finally:
             driver.switch_to.window(self.shop_screen_tab)
 
-    def bflow_login(self):
-        driver = self.driver
-
-        try:
-            WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, '//button[text()="로그인"]')))
-            time.sleep(1)
-
-            login_button = driver.find_element(By.XPATH, '//button[text()="로그인"]')
-            driver.execute_script("arguments[0].click();", login_button)
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("로그인 화면이 아닙니다.")
-
-        try:
-            driver.implicitly_wait(1)
-
-            login_id = self.dict_accounts["브리치"]["ID"]
-            login_pw = self.dict_accounts["브리치"]["PW"]
-
-            id_input = driver.find_element(
-                By.XPATH, '//div[@class="login-area"]//input[@class="login-input"][@placeholder="이메일"]'
-            )
-            id_input.click()
-            time.sleep(0.2)
-            id_input.clear()
-            time.sleep(0.2)
-            id_input.send_keys(login_id)
-
-            pw_input = driver.find_element(
-                By.XPATH, '//div[@class="login-area"]//input[@class="login-input"][@placeholder="비밀번호"]'
-            )
-            pw_input.click()
-            time.sleep(0.2)
-            pw_input.clear()
-            time.sleep(0.2)
-            pw_input.send_keys(login_pw)
-
-            login_button = driver.find_element(By.XPATH, '//button[./span[contains(text(), "로그인")]]')
-            time.sleep(0.2)
-            login_button.click()
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("로그인 정보 입력 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            driver.implicitly_wait(5)
-            main_page = driver.find_element(By.XPATH, '//div[@id="main-page"]')
-
-            time.sleep(5)
-
-        except Exception as e:
-            self.log_msg.emit("지그재그 로그인 실패")
-            print(str(e))
-            raise Exception("지그재그 로그인 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        # 팝업 닫기
-        # $x('//div[contains(@class, "modal")]//span[@class="close-btn"]')
-        try:
-            driver.implicitly_wait(1)
-
-            modal_close_btn = driver.find_element(
-                By.XPATH, '//div[contains(@class, "modal")]//span[@class="close-btn"]'
-            )
-            driver.execute_script("arguments[0].click();", modal_close_btn)
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("no modal popup")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
     def eleven_street_login(self):
         driver = self.driver
 
@@ -292,66 +210,6 @@ class CocoblancOrderCancelProcess:
 
         finally:
             driver.implicitly_wait(self.default_wait)
-
-    def zigzag_login(self):
-        driver = self.driver
-
-        try:
-            # 이전 로그인 세션이 남아있을 경우 바로 스토어 선택 화면으로 이동합니다.
-            WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, '//h1[contains(text(), "파트너센터 로그인")]'))
-            )
-            time.sleep(2)
-
-        except Exception as e:
-            pass
-
-        try:
-            driver.implicitly_wait(1)
-
-            login_id = self.dict_accounts["지그재그"]["ID"]
-            login_pw = self.dict_accounts["지그재그"]["PW"]
-
-            id_input = driver.find_element(By.XPATH, '//input[contains(@placeholder, "이메일")]')
-            id_input.click()
-            time.sleep(0.2)
-            id_input.send_keys(Keys.LEFT_CONTROL, "a", Keys.BACK_SPACE)
-            time.sleep(0.2)
-            id_input.send_keys(login_id)
-
-            pw_input = driver.find_element(By.XPATH, '//input[contains(@placeholder, "비밀번호")]')
-            pw_input.click()
-            time.sleep(0.2)
-            pw_input.send_keys(Keys.LEFT_CONTROL, "a", Keys.BACK_SPACE)
-            time.sleep(0.2)
-            pw_input.send_keys(login_pw)
-
-            login_button = driver.find_element(By.XPATH, '//button[contains(text(), "로그인")]')
-            time.sleep(0.2)
-            login_button.click()
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("로그인 정보 입력 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//div[contains(text(), "코코블랑")]'))
-            )
-            time.sleep(0.2)
-
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//span[contains(text(), "광고 관리")]'))
-            )
-            time.sleep(0.2)
-
-        except Exception as e:
-            print(str(e))
-            self.log_msg.emit("지그재그 로그인 실패")
-            raise Exception("지그재그 로그인 실패")
 
     def coupang_login(self):
         driver = self.driver
@@ -483,10 +341,6 @@ class CocoblancOrderCancelProcess:
     def get_shop_order_cancel_list(self, account):
         if account == "티몬":
             order_cancel_list = self.get_ticketmonster_order_cancel_list()
-        elif account == "지그재그":
-            order_cancel_list = self.get_zigzag_order_cancel_list()
-        elif account == "브리치":
-            order_cancel_list = self.get_bflow_order_cancel_list()
         elif account == "쿠팡":
             order_cancel_list = self.get_coupang_order_cancel_list()
         elif account == "11번가":
@@ -524,102 +378,6 @@ class CocoblancOrderCancelProcess:
                     order_cancel_list.append(order_number)
                 else:
                     print(f"{order_number}는 숫자가 아닙니다.")
-
-        except Exception as e:
-            print(str(e))
-
-        finally:
-            print(f"order_cancel_list: {order_cancel_list}")
-
-        return order_cancel_list
-
-    def get_zigzag_order_cancel_list(self):
-        driver = self.driver
-
-        order_cancel_list = []
-        try:
-            driver.get("https://partners.kakaostyle.com/shop/cocoblanc/order_item/list/cancel")
-
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h1[text()="취소관리"]')))
-            time.sleep(0.2)
-
-            # xx개씩 보기 펼치기
-            StyledSelectTextWrapper = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledSelectTextWrapper")][./span[contains(text(), "씩 보기")]]'
-            )
-            driver.execute_script("arguments[0].click();", StyledSelectTextWrapper)
-            time.sleep(0.2)
-
-            # 500개씩 보기
-            StyledMenuItem = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledMenuItem") and text()="500개씩 보기"]'
-            )
-            driver.execute_script("arguments[0].click();", StyledMenuItem)
-            time.sleep(1)
-
-            # 주문번호 목록 -> 지그재그의 경우 구매자 연락처
-            # $x('//tr[contains(@class, "TableRow")]/td[10]')
-            order_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[10]')
-            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if re.search(phone_number_pattern, order_number):
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
-
-        except Exception as e:
-            print(str(e))
-
-        finally:
-            print(f"order_cancel_list: {order_cancel_list}")
-
-        return order_cancel_list
-
-    def get_bflow_order_cancel_list(self):
-        driver = self.driver
-
-        order_cancel_list = []
-        try:
-            driver.get("https://b-flow.co.kr/order/cancels")
-
-            WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "취소 관리")]'))
-            )
-            time.sleep(0.2)
-
-            # 로딩바 존재
-            # $x('//div[contains(@class, "overlay")]')
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-
-            # 취소요청 x 건 클릭
-            # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
-            cancel_request_link = driver.find_element(
-                By.XPATH,
-                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
-            )
-            driver.execute_script("arguments[0].click();", cancel_request_link)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.2)
-
-            # 500개씩 보기
-            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
-            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
-            driver.execute_script("arguments[0].click();", option_span)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.5)
-
-            # 주문번호 목록
-            order_number_list = driver.find_elements(
-                By.XPATH, '//table[contains(@class, "data-table")]//tbody/tr//td[2]'
-            )
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                order_number = order_number.strip()
-                if order_number.isdigit():
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -1388,22 +1146,24 @@ class CocoblancOrderCancelProcess:
                         ezadmin.login()
                         self.cs_screen_tab = ezadmin.switch_to_cs_screen()
 
-                    if account == "카카오톡스토어":
-                        kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        kakaotalk_store.work_start()
+                    # if account == "카카오톡스토어":
+                    #     kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     kakaotalk_store.work_start()
 
-                    if account == "위메프":
-                        wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        wemakeprice.work_start()
+                    # if account == "위메프":
+                    #     wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     wemakeprice.work_start()
 
                     if account == "티몬":
                         pass
 
-                    if account == "지그재그":
-                        pass
+                    # if account == "지그재그":
+                    #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     zigzag.work_start()
 
                     if account == "브리치":
-                        pass
+                        bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        bflow.work_start()
 
                     if account == "쿠팡":
                         pass

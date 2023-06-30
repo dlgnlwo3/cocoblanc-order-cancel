@@ -97,8 +97,8 @@ class KakaoTalkStore:
             time.sleep(0.5)
 
         except Exception as e:
-            self.log_msg.emit(f"카카오톡스토어 로그인 실패")
-            raise Exception("카카오톡스토어 로그인 실패")
+            self.log_msg.emit(f"{self.shop_name} 로그인 실패")
+            raise Exception(f"{self.shop_name} 로그인 실패")
 
         # 각종 팝업창 닫기
         try:
