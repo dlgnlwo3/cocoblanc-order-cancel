@@ -109,7 +109,7 @@ class Zigzag:
         try:
             driver.get("https://partners.kakaostyle.com/shop/cocoblanc/order_item/list/cancel")
 
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h1[text()="취소관리"]')))
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[text()="취소관리"]')))
             time.sleep(0.2)
 
             # xx개씩 보기 펼치기
@@ -127,98 +127,126 @@ class Zigzag:
             time.sleep(1)
 
             # 주문번호 -> 클레임번호 (묶음번호)
-            # 상품주문번호 -> 주문번호 (개별번호)
-
             # 묶음번호 목록
             # $x('//tr[contains(@class, "TableRow")]/td[@rowspan]/button')
-            claim_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[@rowspan]/button')
+            claim_number_tr_list = driver.find_elements(
+                By.XPATH, '//tr[contains(@class, "TableRow")]/td[@rowspan]/button'
+            )
 
-            # 옵션 td
-            # $x('//td[.//div/span[contains(text(), "- ")]]')
+            claim_number_list = []
+            for claim_number_tr in claim_number_tr_list:
+                claim_number = claim_number_tr.get_attribute("textContent")
+                claim_number_list.append(claim_number)
 
+            # 해당 주문번호에 묶여있는 행을 특정할 수 없어서 주문번호로 검색 후 나오는 모든 행을 추출해야 함
             claim_data = []
             for claim_number in claim_number_list:
-                claim_number = claim_number.get_attribute("textContent")
+                # 상세조건 클릭 -> 셀렉트박스
+                # $x('//label[./span[text()="상세조건"]]/following-sibling::div//div[contains(@class, "StyledSelectWrapper")]')
+                StyledSelectWrapper = driver.find_element(
+                    By.XPATH,
+                    '//label[./span[text()="상세조건"]]/following-sibling::div//div[contains(@class, "StyledSelectWrapper")]',
+                )
+                driver.execute_script("arguments[0].click();", StyledSelectWrapper)
+                time.sleep(0.2)
 
-                # $x('//tr[./td[text()="44998480"][not(@title)]]')
-                claim_tr_list = driver.find_elements(By.XPATH, f'//tr[./td[text()="{claim_number}"][not(@title)]]')
+                # 주문 번호 클릭 -> 옵션
+                # $x('//div[contains(@class, "StyledMenuItem") and contains(text(), "주문 번호")]')
+                StyledMenuItem = driver.find_element(
+                    By.XPATH, '//div[contains(@class, "StyledMenuItem") and contains(text(), "주문 번호")]'
+                )
+                driver.execute_script("arguments[0].click();", StyledMenuItem)
+                time.sleep(0.2)
+
+                # 주문번호 입력 -> 인풋
+                # $x('//label[./span[text()="상세조건"]]/following-sibling::div//input')
+                number_input = driver.find_element(
+                    By.XPATH, '//label[./span[text()="상세조건"]]/following-sibling::div//input'
+                )
+                number_input.clear()
+                number_input.send_keys(claim_number)
+                time.sleep(0.2)
+
+                search_button = driver.find_element(By.XPATH, '//button[text()="검색"]')
+                driver.execute_script("arguments[0].click();", search_button)
+                time.sleep(0.5)
+
+                # $x('//tr[not(.//div[contains(@class, "header-col")])]')
+                claim_tr_list = driver.find_elements(By.XPATH, f'//tr[not(.//div[contains(@class, "header-col")])]')
 
                 claim_tr: webdriver.Chrome._web_element_cls
-                for claim_tr in claim_tr_list:
+                for tr_index, claim_tr in enumerate(claim_tr_list):
                     product_dto = ProductDto()
 
-                    order_number = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][1]',
-                        )
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    order_number = claim_number
                     product_dto.order_number = order_number
 
-                    product_name = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][2]/following-sibling::td[1]',
-                        )
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    # 첫번째 행인 경우에만 위치가 다름 (묶음번호가 표기되어있어서)
+                    # $x('//tr[not(.//div[contains(@class, "header-col")])]/td[14]')
+                    # $x('//tr[not(.//div[contains(@class, "header-col")])]/td[13]')
+                    if tr_index == 0:
+                        product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
+                    else:
+                        product_name = claim_tr.find_element(By.XPATH, f"./td[13]").get_attribute("textContent").strip()
+
+                    product_name = re.sub(r"\[.*?\]", "", product_name)
+                    product_name = product_name.strip()
                     product_dto.product_name = product_name
 
+                    # 옵션 td
+                    # $x('//td[.//div/span[contains(text(), "- ")]]')
                     product_option = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][2]/following-sibling::td[2]',
-                        )
+                        claim_tr.find_element(By.XPATH, f'./td[.//div/span[contains(text(), "- ")]]')
                         .get_attribute("textContent")
                         .strip()
                     )
+
+                    product_option = product_option[product_option.find("- ") + 2 :]
+                    product_option = product_option.replace(": ", "=")
+                    product_option = product_option.replace(" - ", ", ")
                     product_dto.product_option = product_option
 
-                    product_qty = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][2]/following-sibling::td[3]',
-                        )
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    if tr_index == 0:
+                        product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
+                    else:
+                        product_qty = claim_tr.find_element(By.XPATH, f"./td[21]").get_attribute("textContent").strip()
                     product_dto.product_qty = product_qty
 
-                    product_recv_name = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][2]/following-sibling::td[@align="center" and @valign="middle"][3]',
+                    if tr_index == 0:
+                        product_recv_name = (
+                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
                         )
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    else:
+                        product_recv_name = (
+                            claim_tr.find_element(By.XPATH, f"./td[28]").get_attribute("textContent").strip()
+                        )
                     product_dto.product_recv_name = product_recv_name
 
-                    product_recv_tel = (
-                        claim_tr.find_element(
-                            By.XPATH,
-                            f'./td[contains(@style, "underline")][2]/following-sibling::td[@align="center" and @valign="middle"][4]',
+                    if tr_index == 0:
+                        product_recv_tel = (
+                            claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
                         )
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    else:
+                        product_recv_tel = (
+                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                        )
                     product_dto.product_recv_tel = product_recv_tel
 
                     product_dto.to_print()
 
                     claim_data.append({"claim_number": claim_number, "order_number_list": product_dto.get_dict()})
 
-            order_number_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "TableRow")]/td[10]')
-            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if re.search(phone_number_pattern, order_number):
-                    order_list.append(order_number)
-                else:
-                    print(f"{order_number}는 전화번호 양식이 아닙니다.")
+            result = defaultdict(list)
+
+            for item in claim_data:
+                result[item["claim_number"]].append(item["order_number_list"])
+
+            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
+
+            order_list = [
+                {"claim_number": claim_number, "order_number_list": order_number_list}
+                for claim_number, order_number_list in result_dict.items()
+            ]
 
         except Exception as e:
             print(str(e))
@@ -340,20 +368,23 @@ class Zigzag:
     def check_order_cancel_number_from_ezadmin(self, order_dict: dict):
         driver = self.driver
 
+        is_checked = False
+
         order_number = order_dict["주문번호"]
         product_name = order_dict["상품명"]
         product_option: str = order_dict["상품옵션"]
-        product_option = product_option.replace(": ", "/").replace(", ", ",")
         product_qty = order_dict["수량"]
+        product_recv_name = order_dict["수령자명"]
+        product_recv_tel = order_dict["수령자연락처"]
 
         try:
             driver.switch_to.window(self.cs_screen_tab)
 
-            input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
+            input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "전화번호")]/input')
 
             input_order_number.clear()
 
-            input_order_number.send_keys(order_number)
+            input_order_number.send_keys(product_recv_tel)
 
             search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
             driver.execute_script("arguments[0].click();", search_button)
@@ -388,7 +419,7 @@ class Zigzag:
                             .get_attribute("textContent")
                             .strip()
                         )
-                        if not (product_name in search_product_name) or not (product_option in search_product_name):
+                        if not (product_name in search_product_name):
                             continue
 
                         search_product_option = (
@@ -407,12 +438,28 @@ class Zigzag:
                         if not (product_qty in search_product_qty):
                             continue
 
+                        # search_order_number = (
+                        #     driver.find_element(By.XPATH, '//td[@id="di_order_id"]')
+                        #     .get_attribute("textContent")
+                        #     .strip()
+                        # )
+                        # if not (order_number in search_order_number):
+                        #     continue
+
                         search_order_number = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_id"]')
+                            driver.find_element(By.XPATH, '//td[@id="di_order_id_seq"]')
                             .get_attribute("textContent")
                             .strip()
                         )
                         if not (order_number in search_order_number):
+                            continue
+
+                        search_product_recv_name = (
+                            driver.find_element(By.XPATH, '//td[@id="di_recv_name"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+                        if not (product_recv_name in search_product_recv_name):
                             continue
 
                         product_cs_state = (
@@ -422,12 +469,18 @@ class Zigzag:
                         )
 
                         if not "배송전 주문취소" in product_cs_state:
+                            is_checked = False
                             self.log_msg.emit(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
                             raise Exception(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
 
                         print(
                             f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {product_cs_state}"
                         )
+
+                        is_checked = True
+
+                        if is_checked:
+                            return
 
                 except Exception as e:
                     print(str(e))
