@@ -167,6 +167,7 @@ class Zigzag:
                 number_input.send_keys(claim_number)
                 time.sleep(0.2)
 
+                # 검색
                 search_button = driver.find_element(By.XPATH, '//button[text()="검색"]')
                 driver.execute_script("arguments[0].click();", search_button)
                 time.sleep(0.5)
@@ -182,8 +183,6 @@ class Zigzag:
                     product_dto.order_number = order_number
 
                     # 첫번째 행인 경우에만 위치가 다름 (묶음번호가 표기되어있어서)
-                    # $x('//tr[not(.//div[contains(@class, "header-col")])]/td[14]')
-                    # $x('//tr[not(.//div[contains(@class, "header-col")])]/td[13]')
                     if tr_index == 0:
                         product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
                     else:
@@ -273,81 +272,86 @@ class Zigzag:
                     raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
 
         try:
-            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+            driver.get("https://partners.kakaostyle.com/shop/cocoblanc/order_item/list/cancel")
 
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[text()="취소관리"]')))
+            time.sleep(0.2)
+
+            # xx개씩 보기 펼치기
+            StyledSelectTextWrapper = driver.find_element(
+                By.XPATH, '//div[contains(@class, "StyledSelectTextWrapper")][./span[contains(text(), "씩 보기")]]'
             )
+            driver.execute_script("arguments[0].click();", StyledSelectTextWrapper)
             time.sleep(0.2)
 
-            # 주문번호 입력
-            input_orderIdList = driver.find_element(By.XPATH, '//input[@name="orderIdList"]')
-            input_orderIdList.send_keys(order_dict["주문번호"])
-            time.sleep(0.2)
-
-            # 검색 클릭
-            search_button = driver.find_element(By.XPATH, '//button[@type="submit" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
+            # 500개씩 보기
+            StyledMenuItem = driver.find_element(
+                By.XPATH, '//div[contains(@class, "StyledMenuItem") and text()="500개씩 보기"]'
+            )
+            driver.execute_script("arguments[0].click();", StyledMenuItem)
             time.sleep(1)
 
-            # 취소 품목
-            order_cancel_target = driver.find_element(
+            # 상세조건 클릭 -> 셀렉트박스
+            # $x('//label[./span[text()="상세조건"]]/following-sibling::div//div[contains(@class, "StyledSelectWrapper")]')
+            StyledSelectWrapper = driver.find_element(
                 By.XPATH,
-                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_dict["주문번호"]}")]',
+                '//label[./span[text()="상세조건"]]/following-sibling::div//div[contains(@class, "StyledSelectWrapper")]',
             )
-            driver.execute_script("arguments[0].click();", order_cancel_target)
+            driver.execute_script("arguments[0].click();", StyledSelectWrapper)
+            time.sleep(0.2)
+
+            # 주문 번호 클릭 -> 옵션
+            # $x('//div[contains(@class, "StyledMenuItem") and contains(text(), "주문 번호")]')
+            StyledMenuItem = driver.find_element(
+                By.XPATH, '//div[contains(@class, "StyledMenuItem") and contains(text(), "주문 번호")]'
+            )
+            driver.execute_script("arguments[0].click();", StyledMenuItem)
+            time.sleep(0.2)
+
+            # 주문번호 입력 -> 인풋
+            # $x('//label[./span[text()="상세조건"]]/following-sibling::div//input')
+            number_input = driver.find_element(By.XPATH, '//label[./span[text()="상세조건"]]/following-sibling::div//input')
+            number_input.clear()
+            number_input.send_keys(claim_number)
+            time.sleep(0.2)
+
+            # 검색
+            search_button = driver.find_element(By.XPATH, '//button[text()="검색"]')
+            driver.execute_script("arguments[0].click();", search_button)
+            time.sleep(0.5)
+
+            # 취소 품목 체크박스
+            # $x('//tr[.//button[contains(text(), "138752587359305632")]]//th[contains(@class, "checkbox")]//input')
+            order_cancel_target_checkbox = driver.find_element(
+                By.XPATH,
+                f'//tr[.//button[contains(text(), "{claim_number}")]]//th[contains(@class, "checkbox")]//input',
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
             time.sleep(1)
 
-            # 새 창 열림
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            order_cancel_tab = other_tabs[0]
+            # 취소완료 버튼 클릭 시 modal창 열림
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[.//span[text()="취소완료"]]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
+            time.sleep(0.5)
 
             try:
-                driver.switch_to.window(order_cancel_tab)
+                zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
+                driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
                 time.sleep(1)
 
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
-                time.sleep(0.5)
+                # 선택하신 1건의 상품주문을 환불처리 하시겠습니까?
+                cancel_agree_button = driver.find_element(
+                    By.XPATH,
+                    '//div[@class="modal-content"][.//div[contains(text(), "환불처리 하시겠습니까?")]]//button[text()="확인"]',
+                )
+                driver.execute_script("arguments[0].click();", cancel_agree_button)
+                time.sleep(5)
 
-                order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
-                driver.execute_script("arguments[0].click();", order_cancel_button)
-                time.sleep(0.5)
-
-                # 취소 승인 하시겠습니까? alert
-                alert_msg = ""
-                try:
-                    WebDriverWait(driver, 5).until(EC.alert_is_present())
-                    alert = driver.switch_to.alert
-                    alert_msg = alert.text
-                except Exception as e:
-                    print(f"no alert")
-
-                print(f"{alert_msg}")
-
-                if "취소 승인 하시겠습니까" in alert_msg:
-                    alert.accept()
-
-                    # 정상처리 되었습니다. alert
-                    try:
-                        WebDriverWait(driver, 10).until(EC.alert_is_present())
-                    except Exception as e:
-                        print(f"no alert")
-                        self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-                        raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-
-                    alert_ok_try(driver)
-
-                elif alert_msg != "":
-                    alert.accept()
-                    self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
-                    raise Exception(f"{self.shop_name} {order}: {alert_msg}")
-
-                else:
-                    self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-                    raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+                # 1개의 상품주문이 취소 완료 처리 되었습니다.
+                cancel_success_message = driver.find_element(
+                    By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
+                ).get_attribute("textContent")
+                print(cancel_success_message)
 
                 self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
 
@@ -355,15 +359,15 @@ class Zigzag:
                 print(str(e))
                 if self.shop_name in str(e):
                     raise Exception(str(e))
-
-            finally:
-                driver.close()
-                driver.switch_to.window(self.shop_screen_tab)
+                else:
+                    raise Exception(f"{self.shop_name} {order}: 취소 완료 메시지를 찾지 못했습니다.")
 
         except Exception as e:
             print(str(e))
             if self.shop_name in str(e):
                 raise Exception(str(e))
+            else:
+                raise Exception(f"{self.shop_name} {order}: 해당 주문이 존재하지 않습니다.")
 
     def check_order_cancel_number_from_ezadmin(self, order_dict: dict):
         driver = self.driver
@@ -462,6 +466,14 @@ class Zigzag:
                         if not (product_recv_name in search_product_recv_name):
                             continue
 
+                        search_product_recv_tel = (
+                            driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]')
+                            .get_attribute("textContent")
+                            .strip()
+                        )
+                        # if not (product_recv_tel in search_product_recv_tel):
+                        #     continue
+
                         product_cs_state = (
                             driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
                             .get_attribute("textContent")
@@ -473,8 +485,11 @@ class Zigzag:
                             self.log_msg.emit(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
                             raise Exception(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
 
+                        self.log_msg.emit(
+                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {search_product_recv_tel}, {product_cs_state}"
+                        )
                         print(
-                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {product_cs_state}"
+                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {search_product_recv_tel}, {product_cs_state}"
                         )
 
                         is_checked = True

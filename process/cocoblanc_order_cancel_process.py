@@ -308,8 +308,6 @@ class CocoblancOrderCancelProcess:
 
                 if account == "티몬":
                     self.ticketmonster_order_cancel(account, order_cancel_number)
-                elif account == "지그재그":
-                    self.zigzag_order_cancel(account, order_cancel_number)
                 elif account == "네이버":
                     self.naver_order_cancel(account, order_cancel_number)
 
@@ -389,87 +387,6 @@ class CocoblancOrderCancelProcess:
                 print(str(e))
                 if account in str(e):
                     raise Exception(str(e))
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-            else:
-                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
-
-    def zigzag_order_cancel(self, account, order_cancel_number):
-        driver = self.driver
-
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
-
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
-
-        try:
-            driver.get("https://partners.kakaostyle.com/shop/cocoblanc/order_item/list/cancel")
-
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h1[text()="취소관리"]')))
-            time.sleep(0.2)
-
-            # xx개씩 보기 펼치기
-            StyledSelectTextWrapper = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledSelectTextWrapper")][./span[contains(text(), "씩 보기")]]'
-            )
-            driver.execute_script("arguments[0].click();", StyledSelectTextWrapper)
-            time.sleep(0.2)
-
-            # 500개씩 보기
-            StyledMenuItem = driver.find_element(
-                By.XPATH, '//div[contains(@class, "StyledMenuItem") and text()="500개씩 보기"]'
-            )
-            driver.execute_script("arguments[0].click();", StyledMenuItem)
-            time.sleep(1)
-
-            # 취소 품목 체크박스
-            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH,
-                f'//tr[./td[text()="{order_cancel_number}"]]//th[contains(@class, "checkbox")]//input',
-            )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
-
-            # 취소완료 버튼 클릭 시 modal창 열림
-            btn_cancel_proc = driver.find_element(By.XPATH, '//button[.//span[text()="취소완료"]]')
-            driver.execute_script("arguments[0].click();", btn_cancel_proc)
-            time.sleep(0.5)
-
-            try:
-                zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
-                driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
-                time.sleep(1)
-
-                # 선택하신 1건의 상품주문을 환불처리 하시겠습니까?
-                cancel_agree_button = driver.find_element(
-                    By.XPATH,
-                    '//div[@class="modal-content"][.//div[contains(text(), "환불처리 하시겠습니까?")]]//button[text()="확인"]',
-                )
-                driver.execute_script("arguments[0].click();", cancel_agree_button)
-                time.sleep(5)
-
-                # 1개의 상품주문이 취소 완료 처리 되었습니다.
-                cancel_success_message = driver.find_element(
-                    By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
-                ).get_attribute("textContent")
-                print(cancel_success_message)
-
-                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
-
-            except Exception as e:
-                print(str(e))
-                if account in str(e):
-                    raise Exception(str(e))
-                else:
-                    raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
 
         except Exception as e:
             print(str(e))
