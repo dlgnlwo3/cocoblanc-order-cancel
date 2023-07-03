@@ -41,6 +41,7 @@ from process.bflow import Bflow
 from process.coupang import Coupang
 from process.eleven_street import ElevenStreet
 from process.ticketmonster import TicketMonster
+from process.naver import Naver
 
 
 class CocoblancOrderCancelProcess:
@@ -73,95 +74,6 @@ class CocoblancOrderCancelProcess:
             dict_accounts[channel] = {"도메인": domain, "ID": account_id, "PW": account_pw, "URL": url, "API_KEY": api_key}
         return dict_accounts
 
-    # 로그인
-    def shop_login(self, account):
-        if account == "네이버":
-            self.naver_login()
-
-        # self.log_msg.emit(f"{account}: 로그인 성공")
-
-    def naver_login(self):
-        driver = self.driver
-
-        try:
-            WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.XPATH, '//a[@id="loinid"]')))
-            time.sleep(0.5)
-
-        except Exception as e:
-            print("로그인 화면이 아닙니다.")
-
-        try:
-            driver.implicitly_wait(1)
-
-            login_id = self.dict_accounts["네이버"]["ID"]
-            login_pw = self.dict_accounts["네이버"]["PW"]
-
-            pyperclip.copy(login_id)
-            id_input = driver.find_element(By.XPATH, '//input[@id="id"]')
-            id_input.click()
-            time.sleep(0.2)
-            id_input.clear()
-            time.sleep(0.2)
-            id_input.send_keys(Keys.CONTROL, "v")
-
-            pyperclip.copy(login_pw)
-            pw_input = driver.find_element(By.XPATH, '//input[@id="pw"]')
-            pw_input.click()
-            time.sleep(0.2)
-            pw_input.clear()
-            time.sleep(0.2)
-            pw_input.send_keys(Keys.CONTROL, "v")
-
-            login_button = driver.find_element(By.XPATH, '//button[@id="log.login"]')
-            time.sleep(0.2)
-            login_button.click()
-            time.sleep(0.2)
-
-        except Exception as e:
-            print("로그인 정보 입력 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            driver.implicitly_wait(5)
-            main_page_logo = driver.find_element(By.XPATH, '//a[./span[contains(text(), "네이버페이센터")]]')
-
-        except Exception as e:
-            self.log_msg.emit("네이버 로그인 실패")
-            print(str(e))
-            raise Exception("네이버 로그인 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            # 새 창 열림
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            naver_popup_tab = other_tabs[0]
-
-            driver.switch_to.window(naver_popup_tab)
-            time.sleep(0.5)
-
-            driver.close()
-
-        except Exception as e:
-            print(str(e))
-
-        finally:
-            driver.switch_to.window(self.shop_screen_tab)
-
-    # 취소요청 확인
-    def get_shop_order_cancel_list(self, account):
-        if account == "네이버":
-            order_cancel_list = self.get_naver_order_cancel_list()
-
-        self.log_msg.emit(f"{account}: {len(order_cancel_list)}개의 주문번호(묶음번호)를 발견했습니다.")
-
-        return order_cancel_list
-
     def get_naver_order_cancel_list(self):
         driver = self.driver
 
@@ -193,100 +105,6 @@ class CocoblancOrderCancelProcess:
             print(f"order_cancel_list: {order_cancel_list}")
 
         return order_cancel_list
-
-    def shop_order_cancel(self, account, order_cancel_list):
-        for order_cancel_number in order_cancel_list:
-            try:
-                print(f"{account} {order_cancel_number}")
-
-                if account == "티몬":
-                    self.ticketmonster_order_cancel(account, order_cancel_number)
-                elif account == "네이버":
-                    self.naver_order_cancel(account, order_cancel_number)
-
-            except Exception as e:
-                print(str(e))
-                self.log_msg.emit(f"{account} {order_cancel_number}: 작업 실패")
-                self.log_msg.emit(f"{str(e)}")
-                continue
-
-    def ticketmonster_order_cancel(self, account, order_cancel_number):
-        driver = self.driver
-
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
-
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
-
-        try:
-            driver.get("https://spc.tmon.co.kr/claim/cancel")
-
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
-            time.sleep(0.2)
-
-            # 검색 클릭
-            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", btn_srch)
-            time.sleep(3)
-
-            # 취소 품목 체크박스
-            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH,
-                f'//tr[.//a[text()="{order_cancel_number}"]]//img[contains(@onclick, "cancelBubble")]',
-            )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
-
-            # 취소처리 버튼
-            btn_cancel_proc = driver.find_element(By.XPATH, '//a[@class="btn_cancel_proc" and text()="취소처리"]')
-            driver.execute_script("arguments[0].click();", btn_cancel_proc)
-            time.sleep(0.5)
-
-            # modal
-            try:
-                ticketmonster_order_cancel_button = driver.find_element(
-                    By.XPATH, '//div[@class="spc_layer claim"][.//h3[text()="취소처리"]]//button[text()="확인"]'
-                )
-                driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
-                time.sleep(0.5)
-
-                # 요청한 1건의 처리가 완료되었습니다.
-                # $x('//*[contains(text(), "완료되었습니다")]')
-                try:
-                    driver.implicitly_wait(20)
-                    success_message = driver.find_element(By.XPATH, '//p[@class="message"]').get_attribute(
-                        "textContent"
-                    )
-                    print(success_message)
-
-                    if not "완료되었습니다" in success_message:
-                        raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
-
-                except Exception as e:
-                    print(str(e))
-                    raise Exception(f"{account} {order_cancel_number}: 취소 완료 메시지를 찾지 못했습니다.")
-
-                finally:
-                    driver.implicitly_wait(self.default_wait)
-
-                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
-
-            except Exception as e:
-                print(str(e))
-                if account in str(e):
-                    raise Exception(str(e))
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-            else:
-                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
     def naver_order_cancel(self, account, order_cancel_number):
         driver = self.driver
@@ -427,9 +245,9 @@ class CocoblancOrderCancelProcess:
                     #     wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     wemakeprice.work_start()
 
-                    if account == "티몬":
-                        ticketmonster = TicketMonster(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        ticketmonster.work_start()
+                    # if account == "티몬":
+                    #     ticketmonster = TicketMonster(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     ticketmonster.work_start()
 
                     # if account == "지그재그":
                     #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
@@ -448,7 +266,8 @@ class CocoblancOrderCancelProcess:
                     #     eleven_street.work_start()
 
                     if account == "네이버":
-                        pass
+                        naver = Naver(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        naver.work_start()
 
                 except Exception as e:
                     print(str(e))
