@@ -40,6 +40,7 @@ from process.zigzag import Zigzag
 from process.bflow import Bflow
 from process.coupang import Coupang
 from process.eleven_street import ElevenStreet
+from process.ticketmonster import TicketMonster
 
 
 class CocoblancOrderCancelProcess:
@@ -74,9 +75,7 @@ class CocoblancOrderCancelProcess:
 
     # 로그인
     def shop_login(self, account):
-        if account == "티몬":
-            self.ticketmonster_login()
-        elif account == "네이버":
+        if account == "네이버":
             self.naver_login()
 
         # self.log_msg.emit(f"{account}: 로그인 성공")
@@ -153,75 +152,6 @@ class CocoblancOrderCancelProcess:
 
         finally:
             driver.switch_to.window(self.shop_screen_tab)
-
-    def ticketmonster_login(self):
-        driver = self.driver
-
-        try:
-            # 이전 로그인 세션이 남아있을 경우 바로 스토어 선택 화면으로 이동합니다.
-            WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, '//h2[contains(text(), "파트너  로그인")]'))
-            )
-            time.sleep(2)
-
-        except Exception as e:
-            pass
-
-        try:
-            driver.implicitly_wait(1)
-
-            login_id = self.dict_accounts["티몬"]["ID"]
-            login_pw = self.dict_accounts["티몬"]["PW"]
-
-            id_input = driver.find_element(By.XPATH, '//input[@id="form_id"]')
-            time.sleep(0.2)
-            id_input.click()
-            time.sleep(0.2)
-            id_input.clear()
-            time.sleep(0.2)
-            id_input.send_keys(login_id)
-
-            pw_input = driver.find_element(By.XPATH, '//input[@id="form_password"]')
-            time.sleep(0.2)
-            pw_input.click()
-            time.sleep(0.2)
-            pw_input.clear()
-            time.sleep(0.2)
-            pw_input.send_keys(login_pw)
-
-            login_button = driver.find_element(By.XPATH, '//button[contains(@onclick, "submitLogin()")]')
-            login_button.click()
-            time.sleep(1)
-
-            WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "다음에 변경")]'))
-            )
-            time.sleep(3)
-
-        except Exception as e:
-            print("로그인 정보 입력 실패")
-
-        finally:
-            driver.implicitly_wait(self.default_wait)
-
-        try:
-            change_next_time_button = driver.find_element(By.XPATH, '//button[contains(text(), "다음에 변경")]')
-            time.sleep(0.2)
-            change_next_time_button.click()
-            time.sleep(1)
-        except Exception as e:
-            print("비밀번호 변경 안내 스킵 실패")
-
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, '//h3[contains(text(), "취소/환불/교환 현황")]'))
-            )
-            time.sleep(0.5)
-
-        except Exception as e:
-            self.log_msg.emit(f"티몬 로그인 실패")
-            print(e)
-            raise Exception("티몬 로그인 실패")
 
     # 취소요청 확인
     def get_shop_order_cancel_list(self, account):
@@ -395,65 +325,6 @@ class CocoblancOrderCancelProcess:
             else:
                 raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
-    def coupang_order_cancel(self, account, order_cancel_number):
-        driver = self.driver
-
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
-
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
-
-        try:
-            driver.get("https://wing.coupang.com/tenants/sfl-portal/stop-shipment/list")
-
-            WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "출고중지관리")]'))
-            )
-            time.sleep(0.5)
-
-            # 취소 품목 체크박스
-            # '//tr[./td[.//span[contains(text(), "2023061616868779870")]]]//input[@type="checkbox"]'
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH, f'//tr[.//a[contains(text(), "{order_cancel_number}")]]/td//input[@type="checkbox"]'
-            )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
-
-            # 출고중지완료 버튼
-            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "출고중지완료")]')
-            driver.execute_script("arguments[0].click();", btn_cancel_proc)
-            time.sleep(0.5)
-
-            # modal창: 하기 1건을 출고중지 완료 하시겠습니까? 출고중지완료하시면 환불이 완료됩니다.
-            # $x('//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]')
-            try:
-                coupang_order_cancel_button = driver.find_element(
-                    By.XPATH,
-                    '//div[@data-wuic-partial="widget"][.//span[contains(text(), "출고중지완료하시면 환불이 완료됩니다.")]]//div[@class="footer"]/button[contains(text(), "완료")]',
-                )
-                driver.execute_script("arguments[0].click();", coupang_order_cancel_button)
-                time.sleep(2)
-
-                # 별다른 메시지 없이 처리됨
-
-                self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
-
-            except Exception as e:
-                print(str(e))
-                if account in str(e):
-                    raise Exception(str(e))
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-            else:
-                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
-
     def naver_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
@@ -593,8 +464,9 @@ class CocoblancOrderCancelProcess:
                     #     wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     wemakeprice.work_start()
 
-                    # if account == "티몬":
-                    #     pass
+                    if account == "티몬":
+                        ticketmonster = TicketMonster(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        ticketmonster.work_start()
 
                     # if account == "지그재그":
                     #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
@@ -608,9 +480,9 @@ class CocoblancOrderCancelProcess:
                     #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     coupang.work_start()
 
-                    if account == "11번가":
-                        eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        eleven_street.work_start()
+                    # if account == "11번가":
+                    #     eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     eleven_street.work_start()
 
                     if account == "네이버":
                         pass
