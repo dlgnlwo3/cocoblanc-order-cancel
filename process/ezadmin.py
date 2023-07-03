@@ -267,7 +267,33 @@ def check_order_cancel_number_from_ezadmin(
 
                     # 각 판매처마다 검증해야하는 항목이 다릅니다.
                     if shop_name == "카카오톡스토어":
-                        pass
+                        # 판매처 상품명
+                        if not (product_name in search_product_name):
+                            continue
+
+                        # 판매처 옵션
+                        if not (product_option in search_product_option):
+                            continue
+
+                        # 주문수량
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        # 주문번호
+                        if not (order_number in search_order_number):
+                            continue
+
+                        # # 주문상세번호
+                        # if not (order_detail_number in search_order_detail_number):
+                        #     continue
+
+                        # # 수령자
+                        # if not (product_recv_name in search_product_recv_name):
+                        #     continue
+
+                        # # 수령자 연락처
+                        # if not (product_recv_tel in search_product_recv_tel):
+                        #     continue
 
                     elif shop_name == "위메프":
                         pass
@@ -377,6 +403,7 @@ def check_order_cancel_number_from_ezadmin(
                 time.sleep(0.2)
 
         if not is_checked:
+            log_msg.emit(f"{shop_name} {order_dict}: 일치하는 정보가 없습니다.")
             raise Exception(f"{shop_name} {order_dict}: 일치하는 정보가 없습니다.")
 
     except Exception as e:

@@ -786,9 +786,9 @@ class CocoblancOrderCancelProcess:
                         ezadmin.login()
                         self.cs_screen_tab = ezadmin.switch_to_cs_screen()
 
-                    # if account == "카카오톡스토어":
-                    #     kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     kakaotalk_store.work_start()
+                    if account == "카카오톡스토어":
+                        kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        kakaotalk_store.work_start()
 
                     # if account == "위메프":
                     #     wemakeprice = Wemakeprice(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
@@ -797,9 +797,9 @@ class CocoblancOrderCancelProcess:
                     # if account == "티몬":
                     #     pass
 
-                    if account == "지그재그":
-                        zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        zigzag.work_start()
+                    # if account == "지그재그":
+                    #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     zigzag.work_start()
 
                     # if account == "브리치":
                     #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
