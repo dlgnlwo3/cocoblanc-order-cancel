@@ -604,13 +604,13 @@ class CocoblancOrderCancelProcess:
                     #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     bflow.work_start()
 
-                    if account == "쿠팡":
-                        coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        coupang.work_start()
+                    # if account == "쿠팡":
+                    #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     coupang.work_start()
 
-                    # if account == "11번가":
-                    #     eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     eleven_street.work_start()
+                    if account == "11번가":
+                        eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        eleven_street.work_start()
 
                     if account == "네이버":
                         pass

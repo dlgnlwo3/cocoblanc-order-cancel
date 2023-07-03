@@ -10,6 +10,8 @@ from dtos.product_dto import ProductDto
 
 from PySide6.QtCore import SignalInstance
 
+from process.ezadmin import check_order_cancel_number_from_ezadmin
+
 from common.chrome import get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading, send_keys_to_driver
 
@@ -121,6 +123,7 @@ class ElevenStreet:
             # 취소처리 API에는 ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 총 세가지 정보가 필요함
             cancelorders = asyncio.run(APIBot.get_cancelorders_from_date(startTime, endTime))
 
+            claim_data = []
             try:
                 if type(cancelorders["ns2:orders"]["ns2:order"]) == dict:
                     api_cancelorder_list = [cancelorders["ns2:orders"]["ns2:order"]]
@@ -128,15 +131,43 @@ class ElevenStreet:
                     api_cancelorder_list = cancelorders["ns2:orders"]["ns2:order"]
 
                 for api_cancelorder in api_cancelorder_list:
-                    order_list.insert(
-                        0,
-                        {
-                            "ordPrdCnSeq": api_cancelorder["ordPrdCnSeq"],
-                            "ordNo": api_cancelorder["ordNo"],
-                            "ordPrdSeq": api_cancelorder["ordPrdSeq"],
-                            "slctPrdOptNm": api_cancelorder["slctPrdOptNm"],
-                        },
-                    )
+                    product_dto = ProductDto()
+
+                    # ordNo -> 주문번호
+                    order_number = api_cancelorder["ordNo"]
+                    product_dto.order_number = order_number
+
+                    # ordPrdSeq -> 주문상세번호
+                    order_detail_number = api_cancelorder["ordPrdSeq"]
+                    product_dto.order_detail_number = order_detail_number
+
+                    # slctPrdOptNm -> 판매처 옵션
+                    product_option = api_cancelorder["slctPrdOptNm"]
+                    product_dto.product_option = product_option
+
+                    # ordCnQty -> 클레임 수량
+                    product_qty = api_cancelorder["ordCnQty"]
+                    product_dto.product_qty = product_qty
+
+                    # ordPrdCnSeq -> 외부몰 클레임 번호 (취소작업에 반드시 필요한 정보)
+                    product_name = api_cancelorder["ordPrdCnSeq"]
+                    product_dto.product_name = product_name
+
+                    product_dto.to_print()
+
+                    claim_data.append({"claim_number": order_number, "order_number_list": product_dto.get_dict()})
+
+                result = defaultdict(list)
+
+                for item in claim_data:
+                    result[item["claim_number"]].append(item["order_number_list"])
+
+                result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
+
+                order_list = [
+                    {"claim_number": claim_number, "order_number_list": order_number_list}
+                    for claim_number, order_number_list in result_dict.items()
+                ]
 
             except Exception as e:
                 print(str(e))
@@ -152,20 +183,29 @@ class ElevenStreet:
     def order_cancel(self, order):
         driver = self.driver
 
-        # 11번가 order_cancel_number -> ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 세개의 정보가 담겨있음
-        # 주문번호 이지어드민 검증
-        ordPrdCnSeq = order["ordPrdCnSeq"]
-        ordNo = order["ordNo"]
-        ordPrdSeq = order["ordPrdSeq"]
+        claim_number = order["claim_number"]
+        order_number_list = order["order_number_list"]
 
         # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(order)
+        for order_dict in order_number_list:
+            try:
+                driver.switch_to.window(self.cs_screen_tab)
+                check_order_cancel_number_from_ezadmin(self.log_msg, driver, self.shop_name, order_dict)
 
-        except Exception as e:
-            print(str(e))
-            if self.shop_name in str(e):
-                raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+            except Exception as e:
+                print(str(e))
+                if self.shop_name in str(e):
+                    raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+
+            finally:
+                driver.refresh()
+                driver.switch_to.window(self.shop_screen_tab)
+
+        # # 11번가 order_cancel_number -> ordPrdCnSeq, ordNo, ordPrdSeq (클레임번호, 주문번호, 주문순번) 세개의 정보가 담겨있음
+        # # 주문번호 이지어드민 검증
+        # ordPrdCnSeq = order["ordPrdCnSeq"]
+        # ordNo = order["ordNo"]
+        # ordPrdSeq = order["ordPrdSeq"]
 
         try:
             APIBot = ElevenStreetAPI(self.api_key)
@@ -175,19 +215,25 @@ class ElevenStreet:
             WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, '//iframe[@title="취소관리"]')))
             time.sleep(0.5)
 
-            ResultOrder = asyncio.run(APIBot.cancelreqconf_from_ordInfo(ordPrdCnSeq, ordNo, ordPrdSeq))
+            for order_dict in order_number_list:
+                ordPrdCnSeq = order_dict["상품명"]
+                ordNo = order_dict["주문번호"]
+                ordPrdSeq = order_dict["주문상세번호"]
 
-            if ResultOrder["ResultOrder"]["result_code"] != "0":
-                raise Exception(f"{self.shop_name} {ordNo}: 취소 승인 메시지를 찾지 못했습니다.")
+                ResultOrder = asyncio.run(APIBot.cancelreqconf_from_ordInfo(ordPrdCnSeq, ordNo, ordPrdSeq))
 
-            self.log_msg.emit(f"{self.shop_name} {ordNo}: 취소 완료")
+                if ResultOrder["ResultOrder"]["result_code"] != "0":
+                    self.log_msg.emit(f"{self.shop_name} {order_dict}: 취소 승인 메시지를 찾지 못했습니다.")
+                    continue
+
+                self.log_msg.emit(f"{self.shop_name} {order_dict}: 취소 완료")
 
         except Exception as e:
             print(str(e))
             if self.shop_name in str(e):
                 raise Exception(str(e))
             else:
-                raise Exception(f"{self.shop_name} {ordNo}: 해당 주문이 존재하지 않습니다.")
+                raise Exception(f"{self.shop_name} {order}: 해당 주문이 존재하지 않습니다.")
 
     def check_order_cancel_number_from_ezadmin(self, order_dict: dict):
         driver = self.driver
