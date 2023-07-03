@@ -122,120 +122,24 @@ class Naver:
 
         order_list = []
         try:
-            driver.get("https://spc.tmon.co.kr/claim/cancel")
+            driver.get("https://admin.pay.naver.com/o/v3/claim/cancel?summaryInfoType=CANCEL_REQUEST_C1")
 
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
-            time.sleep(0.2)
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h2[contains(text(), "취소관리")]'))
+            )
+            time.sleep(0.5)
 
-            # 검색 클릭
-            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", btn_srch)
-            time.sleep(3)
-
-            # 묶음클레임번호 목록
-            # $x('//tr[contains(@class, "_xp")]/td[2]/a')
-            claim_number_link_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "_xp")]/td[2]/a')
-
-            claim_number_list = []
-            for claim_number_link in claim_number_link_list:
-                claim_number = claim_number_link.get_attribute("textContent")
-                claim_number_list.append(claim_number)
-
-            claim_data = []
-            for claim_number in claim_number_list:
-                print(f"묶음클레임번호: {claim_number}")
-
-                # 묶음클레임번호 클릭
-                try:
-                    claim_link = driver.find_element(By.XPATH, f'//a[text()="{claim_number}"]')
-                    driver.execute_script("arguments[0].click();", claim_link)
-                    time.sleep(0.2)
-                except Exception as e:
-                    print(str(e))
-                    print(f"{claim_number} 해당 클레임번호를 찾지 못했습니다.")
-                    continue
-
-                # 새 창 열림
-                try:
-                    other_tabs = [
-                        tab
-                        for tab in driver.window_handles
-                        if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-                    ]
-                    claim_check_tab = other_tabs[0]
-                except Exception as e:
-                    print(str(e))
-                    print(f"{claim_number} 새 창을 찾지 못했습니다.")
-                    continue
-
-                # 새 창으로 이동 후 작업
-                try:
-                    driver.switch_to.window(claim_check_tab)
-                    time.sleep(0.5)
-
-                    # $x('//table[@summary="요청정보"]/tbody/tr')
-                    claim_product_tr_list = driver.find_elements(By.XPATH, '//table[@summary="요청정보"]/tbody/tr')
-
-                    for claim_product_tr in claim_product_tr_list:
-                        product_dto = ProductDto()
-
-                        # 주문번호
-                        order_number = driver.find_element(
-                            By.XPATH, '//th[text()="주문번호"]/following-sibling::td/strong'
-                        ).get_attribute("textContent")
-                        product_dto.order_number = order_number
-
-                        # 딜명
-                        product_name = claim_product_tr.find_element(By.XPATH, "./td[1]").get_attribute("textContent")
-                        product_dto.product_name = product_name
-
-                        # 옵션명
-                        product_option = claim_product_tr.find_element(By.XPATH, "./td[2]").get_attribute("textContent")
-                        product_dto.product_option = product_option
-
-                        # 수량
-                        product_qty = claim_product_tr.find_element(By.XPATH, './td[3][@class="amount"]').get_attribute(
-                            "textContent"
-                        )
-                        product_qty = re.sub(r"[^0-9]", "", product_qty)
-                        product_dto.product_qty = product_qty
-
-                        # 수취인명
-                        product_recv_name = driver.find_element(
-                            By.XPATH, '//div[contains(text()[2], "수취인명")]//text()[2]/following-sibling::em'
-                        ).get_attribute("textContent")
-                        product_dto.product_recv_name = product_recv_name
-
-                        # 주문자 연락처
-                        product_recv_tel = driver.find_element(
-                            By.XPATH, '//th[text()="주문자 연락처"]/following-sibling::td/strong'
-                        ).get_attribute("textContent")
-                        product_dto.product_recv_tel = product_recv_tel
-
-                        product_dto.to_print()
-
-                        claim_data.append({"claim_number": claim_number, "order_number_list": product_dto.get_dict()})
-
-                except Exception as e:
-                    print(str(e))
-                    print(f"{claim_number} 정보를 수집하지 못했습니다.")
-                    continue
-
-                finally:
-                    driver.close()
-                    driver.switch_to.window(self.shop_screen_tab)
-
-            result = defaultdict(list)
-
-            for item in claim_data:
-                result[item["claim_number"]].append(item["order_number_list"])
-
-            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
-
-            order_list = [
-                {"claim_number": claim_number, "order_number_list": order_number_list}
-                for claim_number, order_number_list in result_dict.items()
-            ]
+            # 주문번호 목록 -> 네이버의 경우 구매자 연락처
+            # $x('//tr/td[@data-column-name="receiverTelNo1"]/div')
+            order_number_list = driver.find_elements(By.XPATH, '//tr/td[@data-column-name="receiverTelNo1"]/div')
+            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
+            virtual_number_pattern = r"050\d{1}-\d{3,4}-\d{3,4}"
+            for order_number in order_number_list:
+                order_number = order_number.get_attribute("textContent")
+                if re.search(phone_number_pattern, order_number) or re.search(virtual_number_pattern, order_number):
+                    order_list.append(order_number)
+                else:
+                    print(f"{order_number}는 전화번호, 안심번호 양식이 아닙니다.")
 
         except Exception as e:
             print(str(e))
@@ -260,7 +164,7 @@ class Naver:
             except Exception as e:
                 print(str(e))
                 if self.shop_name in str(e):
-                    raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+                    raise Exception(f"{str(e)}")
 
             finally:
                 driver.refresh()

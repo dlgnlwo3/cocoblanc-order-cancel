@@ -224,7 +224,7 @@ class Bflow:
             except Exception as e:
                 print(str(e))
                 if self.shop_name in str(e):
-                    raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+                    raise Exception(f"{str(e)}")
 
             finally:
                 driver.refresh()

@@ -249,21 +249,21 @@ class CocoblancOrderCancelProcess:
                     #     ticketmonster = TicketMonster(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     ticketmonster.work_start()
 
-                    # if account == "지그재그":
-                    #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     zigzag.work_start()
+                    if account == "지그재그":
+                        zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        zigzag.work_start()
 
-                    # if account == "브리치":
-                    #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     bflow.work_start()
+                    if account == "브리치":
+                        bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        bflow.work_start()
 
-                    # if account == "쿠팡":
-                    #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     coupang.work_start()
+                    if account == "쿠팡":
+                        coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        coupang.work_start()
 
-                    # if account == "11번가":
-                    #     eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     eleven_street.work_start()
+                    if account == "11번가":
+                        eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        eleven_street.work_start()
 
                     if account == "네이버":
                         naver = Naver(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
