@@ -395,103 +395,6 @@ class CocoblancOrderCancelProcess:
             else:
                 raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
-    def bflow_order_cancel(self, account, order_cancel_number):
-        driver = self.driver
-
-        # 주문번호 이지어드민 검증
-        try:
-            self.check_order_cancel_number_from_ezadmin(account, order_cancel_number)
-
-        except Exception as e:
-            print(str(e))
-            if order_cancel_number in str(e):
-                raise Exception((str(e)))
-
-        try:
-            driver.get("https://b-flow.co.kr/order/cancels")
-
-            WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, '//h3[contains(text(), "취소 관리")]'))
-            )
-            time.sleep(0.2)
-
-            # 로딩바 존재
-            # $x('//div[contains(@class, "overlay")]')
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-
-            # 취소요청 x 건 클릭
-            # $x('//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]')
-            cancel_request_link = driver.find_element(
-                By.XPATH,
-                '//span[contains(text(), "취소요청")]/span[contains(@class, "text-link") and contains(text(), "건")]',
-            )
-            driver.execute_script("arguments[0].click();", cancel_request_link)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.2)
-
-            # 500개씩 보기
-            # $x('//span[contains(@class, "option")][./span[text()="500"]]')
-            option_span = driver.find_element(By.XPATH, '//span[contains(@class, "option")][./span[text()="500"]]')
-            driver.execute_script("arguments[0].click();", option_span)
-            wait_loading(driver, '//div[contains(@class, "overlay")]')
-            time.sleep(0.5)
-
-            # 취소 품목 체크박스
-            # '//tr[./td[.//span[contains(text(), "2023061616868779870")]]]//input[@type="checkbox"]'
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH, f'//tr[./td[.//span[contains(text(), "{order_cancel_number}")]]]//input[@type="checkbox"]'
-            )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
-
-            # 취소완료 버튼
-            btn_cancel_proc = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
-            driver.execute_script("arguments[0].click();", btn_cancel_proc)
-            time.sleep(0.5)
-
-            # 1개의 항목을 취소완료 처리하시겠습니까? alert
-            alert_msg = ""
-            try:
-                WebDriverWait(driver, 5).until(EC.alert_is_present())
-                alert = driver.switch_to.alert
-                alert_msg = alert.text
-            except Exception as e:
-                print(f"no alert")
-                raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
-
-            print(f"{alert_msg}")
-
-            if "취소완료 처리하시겠습니까" in alert_msg:
-                alert.accept()
-                time.sleep(1)
-
-                # [취소번호: xxxxxxxx] 완료 처리되었습니다.
-                try:
-                    cancel_success_message = driver.find_element(
-                        By.XPATH, '//li[contains(text(), "완료 처리되었습니다") and contains(text(), "취소번호")]'
-                    ).get_attribute("textContent")
-                    print(cancel_success_message)
-
-                except Exception as e:
-                    print(str(e))
-                    raise Exception(f"{account} {order_cancel_number}: 취소 성공 메시지를 찾지 못했습니다.")
-
-            elif alert_msg != "":
-                alert.dismiss()
-                raise Exception(f"{account} {order_cancel_number}: {alert_msg}")
-
-            else:
-                raise Exception(f"{account} {order_cancel_number}: 취소 승인 메시지를 찾지 못했습니다.")
-
-            self.log_msg.emit(f"{account} {order_cancel_number}: 취소 완료")
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-            else:
-                raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
-
     def coupang_order_cancel(self, account, order_cancel_number):
         driver = self.driver
 
@@ -665,110 +568,6 @@ class CocoblancOrderCancelProcess:
             else:
                 raise Exception(f"{account} {order_cancel_number}: 해당 주문이 존재하지 않습니다.")
 
-    def check_order_cancel_number_from_ezadmin(self, account, order_cancel_number: dict):
-        driver = self.driver
-        try:
-            driver.switch_to.window(self.cs_screen_tab)
-
-            if account == "네이버" or account == "지그재그":
-                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "전화번호")]/input')
-            else:
-                input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
-
-            input_order_number.clear()
-            time.sleep(0.2)
-
-            input_order_number.send_keys(order_cancel_number["주문번호"])
-            time.sleep(0.2)
-
-            search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
-            time.sleep(3)
-
-            grid_order_trs = driver.find_elements(By.XPATH, '//table[@id="grid_order"]//tr[not(@class="jqgfirstrow")]')
-
-            if len(grid_order_trs) == 0:
-                raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
-
-            for grid_order_tr in grid_order_trs:
-                try:
-                    driver.execute_script("arguments[0].click();", grid_order_tr)
-                    time.sleep(0.2)
-
-                    grid_product_trs = driver.find_elements(
-                        By.XPATH,
-                        f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_cancel_number}")]',
-                    )
-
-                    if len(grid_product_trs) == 0:
-                        raise Exception(f"{account} {order_cancel_number}: 이지어드민 검색 결과가 없습니다.")
-
-                    for grid_product_tr in grid_product_trs:
-                        driver.execute_script("arguments[0].click();", grid_product_tr)
-                        time.sleep(0.2)
-
-                        product_name = (
-                            driver.find_element(By.XPATH, '//td[@id="di_shop_pname"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if (order_cancel_number["상품명"] in product_name) or (
-                            order_cancel_number["상품옵션"] in product_name
-                        ):
-                            pass
-
-                        product_option = (
-                            driver.find_element(By.XPATH, '//td[@id="di_shop_options"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if order_cancel_number["상품옵션"] in product_option:
-                            pass
-
-                        product_qty = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-
-                        product_order_id_seq = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_id_seq"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-
-                        print(
-                            f"{account}, {order_cancel_number}, {product_cs_state}, {product_name}, {product_option}, {product_qty}, {product_order_id_seq}"
-                        )
-
-                        product_cs_state = (
-                            driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-
-                        if not "배송전 주문취소" in product_cs_state:
-                            raise Exception(f"{account} {order_cancel_number}: 배송전 주문취소 상태가 아닙니다.")
-
-                except Exception as e:
-                    print(str(e))
-                    if account in str(e):
-                        raise Exception(str(e))
-
-                finally:
-                    tab_close_button = driver.find_element(By.XPATH, '//span[contains(@class, "ui-icon-close")]')
-                    driver.execute_script("arguments[0].click();", tab_close_button)
-                    time.sleep(0.2)
-
-        except Exception as e:
-            print(str(e))
-            if account in str(e):
-                raise Exception(str(e))
-
-        finally:
-            driver.refresh()
-            driver.switch_to.window(self.shop_screen_tab)
-
     # 전체작업 시작
     def work_start(self):
         print(f"CocoblancOrderCancelProcess: work_start")
@@ -801,13 +600,13 @@ class CocoblancOrderCancelProcess:
                     #     zigzag = Zigzag(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
                     #     zigzag.work_start()
 
-                    if account == "브리치":
-                        bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                        bflow.work_start()
+                    # if account == "브리치":
+                    #     bflow = Bflow(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                    #     bflow.work_start()
 
-                    # if account == "쿠팡":
-                    #     coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
-                    #     coupang.work_start()
+                    if account == "쿠팡":
+                        coupang = Coupang(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
+                        coupang.work_start()
 
                     # if account == "11번가":
                     #     eleven_street = ElevenStreet(self.log_msg, self.driver, self.cs_screen_tab, dict_account)
