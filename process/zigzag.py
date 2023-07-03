@@ -10,6 +10,8 @@ from dtos.product_dto import ProductDto
 
 from PySide6.QtCore import SignalInstance
 
+from process.ezadmin import check_order_cancel_number_from_ezadmin
+
 from common.chrome import get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading, send_keys_to_driver
 
@@ -264,12 +266,18 @@ class Zigzag:
         # 주문번호 이지어드민 검증
         for order_dict in order_number_list:
             try:
-                self.check_order_cancel_number_from_ezadmin(order_dict)
+                driver.switch_to.window(self.cs_screen_tab)
+                # self.check_order_cancel_number_from_ezadmin(order_dict)
+                check_order_cancel_number_from_ezadmin(self.log_msg, driver, self.shop_name, order_dict)
 
             except Exception as e:
                 print(str(e))
                 if self.shop_name in str(e):
                     raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+
+            finally:
+                driver.refresh()
+                driver.switch_to.window(self.shop_screen_tab)
 
         try:
             driver.get("https://partners.kakaostyle.com/shop/cocoblanc/order_item/list/cancel")
@@ -375,6 +383,7 @@ class Zigzag:
         is_checked = False
 
         order_number = order_dict["주문번호"]
+        order_detail_number = order_dict["주문상세번호"]
         product_name = order_dict["상품명"]
         product_option: str = order_dict["상품옵션"]
         product_qty = order_dict["수량"]

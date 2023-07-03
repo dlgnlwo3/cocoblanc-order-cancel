@@ -186,6 +186,7 @@ class KakaoTalkStore:
                     By.XPATH,
                     '//table[@class="gridBodyTable"]//tr[not(contains(@class, "padding")) and contains(@class, "selected")]//div[contains(@class, "bodyTdText")][contains(@id, "AX_0_AX_15_")]',
                 ).get_attribute("textContent")
+                product_option = product_option.replace(": ", "/").replace(", ", ",")
                 product_dto.product_option = product_option
 
                 product_qty = driver.find_element(
@@ -347,10 +348,12 @@ class KakaoTalkStore:
         driver = self.driver
 
         order_number = order_dict["주문번호"]
+        order_detail_number = order_dict["주문상세번호"]
         product_name = order_dict["상품명"]
         product_option: str = order_dict["상품옵션"]
-        product_option = product_option.replace(": ", "/").replace(", ", ",")
         product_qty = order_dict["수량"]
+        product_recv_name = order_dict["수령자명"]
+        product_recv_tel = order_dict["수령자연락처"]
 
         try:
             driver.switch_to.window(self.cs_screen_tab)

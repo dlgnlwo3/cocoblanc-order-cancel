@@ -176,3 +176,210 @@ class Ezadmin:
 
         # cs_screen_tab
         return driver.window_handles[0]
+
+
+def check_order_cancel_number_from_ezadmin(
+    log_msg: SignalInstance, driver: webdriver.Chrome, shop_name: str, order_dict: dict
+):
+    is_checked = False
+
+    order_number = order_dict["주문번호"]
+    order_detail_number = order_dict["주문상세번호"]
+    product_name = order_dict["상품명"]
+    product_option: str = order_dict["상품옵션"]
+    product_qty = order_dict["수량"]
+    product_recv_name = order_dict["수령자명"]
+    product_recv_tel = order_dict["수령자연락처"]
+
+    try:
+        if shop_name == "네이버" or shop_name == "지그재그":
+            input_tel_number = driver.find_element(By.XPATH, '//td[contains(text(), "전화번호")]/input')
+            input_tel_number.clear()
+            input_tel_number.send_keys(product_recv_tel)
+        else:
+            input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
+            input_order_number.clear()
+            input_order_number.send_keys(order_number)
+
+        search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
+        driver.execute_script("arguments[0].click();", search_button)
+        time.sleep(2)
+
+        grid_order_trs = driver.find_elements(By.XPATH, '//table[@id="grid_order"]//tr[not(@class="jqgfirstrow")]')
+
+        if len(grid_order_trs) == 0:
+            log_msg.emit(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
+            raise Exception(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
+
+        for grid_order_tr in grid_order_trs:
+            try:
+                driver.execute_script("arguments[0].click();", grid_order_tr)
+                time.sleep(0.2)
+
+                grid_product_trs = driver.find_elements(
+                    By.XPATH,
+                    f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_number}")]',
+                )
+
+                if len(grid_product_trs) == 0:
+                    log_msg.emit(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
+                    raise Exception(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
+
+                for grid_product_tr in grid_product_trs:
+                    driver.execute_script("arguments[0].click();", grid_product_tr)
+                    time.sleep(0.2)
+
+                    search_product_name = (
+                        driver.find_element(By.XPATH, '//td[@id="di_shop_pname"]').get_attribute("textContent").strip()
+                    )
+
+                    search_product_option = (
+                        driver.find_element(By.XPATH, '//td[@id="di_shop_options"]')
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+
+                    search_product_qty = (
+                        driver.find_element(By.XPATH, '//td[@id="di_order_qty"]').get_attribute("textContent").strip()
+                    )
+
+                    search_order_number = (
+                        driver.find_element(By.XPATH, '//td[@id="di_order_id"]').get_attribute("textContent").strip()
+                    )
+
+                    search_order_detail_number = (
+                        driver.find_element(By.XPATH, '//td[@id="di_order_id_seq"]')
+                        .get_attribute("textContent")
+                        .strip()
+                    )
+
+                    search_product_recv_name = (
+                        driver.find_element(By.XPATH, '//td[@id="di_recv_name"]').get_attribute("textContent").strip()
+                    )
+
+                    search_product_recv_tel = (
+                        driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]').get_attribute("textContent").strip()
+                    )
+
+                    search_product_cs_state = (
+                        driver.find_element(By.XPATH, '//td[@id="di_product_cs"]').get_attribute("textContent").strip()
+                    )
+
+                    # 각 판매처마다 검증해야하는 항목이 다릅니다.
+                    if shop_name == "카카오톡스토어":
+                        pass
+
+                    elif shop_name == "위메프":
+                        pass
+
+                    elif shop_name == "티몬":
+                        pass
+
+                    elif shop_name == "지그재그":
+                        # 판매처 상품명
+                        if not (product_name in search_product_name):
+                            continue
+
+                        # 판매처 옵션
+                        if not (product_option in search_product_option):
+                            continue
+
+                        # 주문수량
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        # # 주문번호
+                        # if not (order_number in search_order_number):
+                        #     continue
+
+                        # 주문상세번호
+                        if not (order_number in search_order_detail_number):
+                            continue
+
+                        # 수령자
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
+
+                        # 수령자 연락처
+                        if not (product_recv_tel in search_product_recv_tel):
+                            continue
+
+                    elif shop_name == "브리치":
+                        pass
+
+                    elif shop_name == "쿠팡":
+                        pass
+
+                    elif shop_name == "11번가":
+                        pass
+
+                    elif shop_name == "네이버":
+                        pass
+
+                    else:
+                        # 판매처 상품명
+                        if not (product_name in search_product_name):
+                            continue
+
+                        # 판매처 옵션
+                        if not (product_option in search_product_option):
+                            continue
+
+                        # 주문수량
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        # 주문번호
+                        if not (order_number in search_order_number):
+                            continue
+
+                        # 주문상세번호
+                        if not (order_detail_number in search_order_detail_number):
+                            continue
+
+                        # 수령자
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
+
+                        # 수령자 연락처
+                        if not (product_recv_tel in search_product_recv_tel):
+                            continue
+
+                    # C/S 상태
+                    if not "배송전 주문취소" in search_product_cs_state:
+                        is_checked = False
+                        log_msg.emit(f"{shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
+                        raise Exception(f"{shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
+
+                    log_msg.emit(
+                        f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {search_product_recv_tel}, {search_product_cs_state}"
+                    )
+                    print(
+                        f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {search_product_recv_tel}, {search_product_cs_state}"
+                    )
+
+                    is_checked = True
+
+                    if is_checked:
+                        return
+                    else:
+                        print(f"알 수 없는 오류")
+                        raise Exception(f"{shop_name} {order_dict}: 알 수 없는 오류가 발생했습니다.")
+
+            except Exception as e:
+                print(str(e))
+                if shop_name in str(e):
+                    raise Exception(str(e))
+
+            finally:
+                tab_close_button = driver.find_element(By.XPATH, '//span[contains(@class, "ui-icon-close")]')
+                driver.execute_script("arguments[0].click();", tab_close_button)
+                time.sleep(0.2)
+
+        if not is_checked:
+            raise Exception(f"{shop_name} {order_dict}: 일치하는 정보가 없습니다.")
+
+    except Exception as e:
+        print(str(e))
+        if shop_name in str(e):
+            raise Exception(str(e))
