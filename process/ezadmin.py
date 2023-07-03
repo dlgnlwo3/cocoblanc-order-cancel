@@ -325,7 +325,33 @@ def check_order_cancel_number_from_ezadmin(
                         #     continue
 
                     elif shop_name == "티몬":
-                        pass
+                        # 판매처 상품명
+                        if not (product_name in search_product_name):
+                            continue
+
+                        # 판매처 옵션
+                        if not (product_option in search_product_option):
+                            continue
+
+                        # 주문수량
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        # 주문번호
+                        if not (order_number in search_order_number):
+                            continue
+
+                        # 주문상세번호
+                        if not (order_detail_number in search_order_detail_number):
+                            continue
+
+                        # 수령자
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
+
+                        # 수령자 연락처
+                        if not (product_recv_tel in search_product_recv_tel):
+                            continue
 
                     elif shop_name == "지그재그":
                         # 판매처 상품명
@@ -444,7 +470,33 @@ def check_order_cancel_number_from_ezadmin(
                         #     continue
 
                     elif shop_name == "네이버":
-                        pass
+                        # 판매처 상품명
+                        if not (product_name in search_product_name):
+                            continue
+
+                        # 판매처 옵션
+                        if not (product_option in search_product_option):
+                            continue
+
+                        # 주문수량
+                        if not (product_qty in search_product_qty):
+                            continue
+
+                        # 주문번호
+                        if not (order_number in search_order_number):
+                            continue
+
+                        # 주문상세번호
+                        if not (order_detail_number in search_order_detail_number):
+                            continue
+
+                        # 수령자
+                        if not (product_recv_name in search_product_recv_name):
+                            continue
+
+                        # 수령자 연락처
+                        if not (product_recv_tel in search_product_recv_tel):
+                            continue
 
                     else:
                         # 판매처 상품명
