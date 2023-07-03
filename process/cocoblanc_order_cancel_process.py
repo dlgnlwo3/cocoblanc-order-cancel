@@ -155,47 +155,10 @@ class CocoblancOrderCancelProcess:
 
     # 취소요청 확인
     def get_shop_order_cancel_list(self, account):
-        if account == "티몬":
-            order_cancel_list = self.get_ticketmonster_order_cancel_list()
-        elif account == "네이버":
+        if account == "네이버":
             order_cancel_list = self.get_naver_order_cancel_list()
 
         self.log_msg.emit(f"{account}: {len(order_cancel_list)}개의 주문번호(묶음번호)를 발견했습니다.")
-
-        return order_cancel_list
-
-    def get_ticketmonster_order_cancel_list(self):
-        driver = self.driver
-
-        order_cancel_list = []
-        try:
-            driver.get("https://spc.tmon.co.kr/claim/cancel")
-
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
-            time.sleep(0.2)
-
-            # 검색 클릭
-            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", btn_srch)
-            time.sleep(3)
-
-            # 주문번호 목록
-            # $x('//tr[contains(@class, "_xp")]//a[contains(@href, "popupBuyDetailInfo")]')
-            order_number_list = driver.find_elements(
-                By.XPATH, '//tr[contains(@class, "_xp")]//a[contains(@href, "popupBuyDetailInfo")]'
-            )
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if order_number.isdigit():
-                    order_cancel_list.append(order_number)
-                else:
-                    print(f"{order_number}는 숫자가 아닙니다.")
-
-        except Exception as e:
-            print(str(e))
-
-        finally:
-            print(f"order_cancel_list: {order_cancel_list}")
 
         return order_cancel_list
 

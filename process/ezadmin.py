@@ -325,12 +325,12 @@ def check_order_cancel_number_from_ezadmin(
                         #     continue
 
                     elif shop_name == "티몬":
-                        # 판매처 상품명
-                        if not (product_name in search_product_name):
-                            continue
+                        # # 판매처 상품명
+                        # if not (product_name in search_product_name):
+                        #     continue
 
                         # 판매처 옵션
-                        if not (product_option in search_product_option):
+                        if not (search_product_option in product_option):
                             continue
 
                         # 주문수량
@@ -341,9 +341,9 @@ def check_order_cancel_number_from_ezadmin(
                         if not (order_number in search_order_number):
                             continue
 
-                        # 주문상세번호
-                        if not (order_detail_number in search_order_detail_number):
-                            continue
+                        # # 주문상세번호
+                        # if not (order_detail_number in search_order_detail_number):
+                        #     continue
 
                         # 수령자
                         if not (product_recv_name in search_product_recv_name):

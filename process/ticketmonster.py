@@ -175,15 +175,11 @@ class TicketMonster:
                     for claim_product_tr in claim_product_tr_list:
                         product_dto = ProductDto()
 
-                        # 클레임번호
-                        claim_number = claim_number
-                        product_dto.order_number = claim_number
-
                         # 주문번호
                         order_number = driver.find_element(
                             By.XPATH, '//th[text()="주문번호"]/following-sibling::td/strong'
                         ).get_attribute("textContent")
-                        product_dto.order_detail_number = order_number
+                        product_dto.order_number = order_number
 
                         # 딜명
                         product_name = claim_product_tr.find_element(By.XPATH, "./td[1]").get_attribute("textContent")
@@ -267,81 +263,79 @@ class TicketMonster:
                 driver.switch_to.window(self.shop_screen_tab)
 
         try:
-            driver.get("https://store-buy-sell.kakao.com/order/cancelList?orderSummaryCount=CancelRequestToBuyer")
+            driver.get("https://spc.tmon.co.kr/claim/cancel")
 
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, '//span[contains(text(), "구매자 취소 요청")]'))
-            )
-            time.sleep(0.2)
-
-            # 주문번호 입력
-            input_orderIdList = driver.find_element(By.XPATH, '//input[@name="orderIdList"]')
-            input_orderIdList.send_keys(order_dict["주문번호"])
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
             time.sleep(0.2)
 
             # 검색 클릭
-            search_button = driver.find_element(By.XPATH, '//button[@type="submit" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
-            time.sleep(1)
+            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
+            driver.execute_script("arguments[0].click();", btn_srch)
+            time.sleep(3)
 
-            # 취소 품목
-            order_cancel_target = driver.find_element(
+            # 취소 품목 체크박스
+            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
+            order_cancel_target_checkbox = driver.find_element(
                 By.XPATH,
-                f'//button[contains(@onclick, "claim.popOrderDetail") and contains(@onclick, "{order_dict["주문번호"]}")]',
+                f'//tr[.//a[text()="{claim_number}"]]//img[contains(@onclick, "cancelBubble")]',
             )
-            driver.execute_script("arguments[0].click();", order_cancel_target)
+            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
             time.sleep(1)
 
-            # 새 창 열림
-            other_tabs = [
-                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
-            ]
-            order_cancel_tab = other_tabs[0]
+            # 취소처리 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//a[@class="btn_cancel_proc" and text()="취소처리"]')
+            driver.execute_script("arguments[0].click();", btn_cancel_proc)
+            time.sleep(0.5)
 
+            # 해당 요청을 처리할 수 없습니다. alert
+            alert_msg = ""
             try:
-                driver.switch_to.window(order_cancel_tab)
-                time.sleep(1)
+                WebDriverWait(driver, 1).until(EC.alert_is_present())
+                alert = driver.switch_to.alert
+                alert_msg = alert.text
+            except Exception as e:
+                print(f"no alert")
 
-                order_cancel_iframe = driver.find_element(By.XPATH, '//iframe[contains(@src, "omsOrderDetail")]')
-                driver.switch_to.frame(order_cancel_iframe)
+            print(f"{alert_msg}")
+
+            if ("해당 요청을 처리할 수 없습니다" in alert_msg) or ("처리할 요청건을 선택해 주세요" in alert_msg):
+                alert.accept()
+                self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
+                raise Exception(f"{self.shop_name} {order}: {alert_msg}")
+
+            elif alert_msg != "":
+                alert.accept()
+                self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
+                raise Exception(f"{self.shop_name} {order}: {alert_msg}")
+
+            # modal
+            try:
+                ticketmonster_order_cancel_button = driver.find_element(
+                    By.XPATH, '//div[@class="spc_layer claim"][.//h3[text()="취소처리"]]//button[text()="확인"]'
+                )
+                driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
                 time.sleep(0.5)
 
-                order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소승인(환불)")]')
-                driver.execute_script("arguments[0].click();", order_cancel_button)
-                time.sleep(0.5)
-
-                # 취소 승인 하시겠습니까? alert
-                alert_msg = ""
+                # 요청한 1건의 처리가 완료되었습니다.
+                # $x('//*[contains(text(), "완료되었습니다")]')
                 try:
-                    WebDriverWait(driver, 5).until(EC.alert_is_present())
-                    alert = driver.switch_to.alert
-                    alert_msg = alert.text
-                except Exception as e:
-                    print(f"no alert")
+                    driver.implicitly_wait(20)
+                    success_message = driver.find_element(By.XPATH, '//p[@class="message"]').get_attribute(
+                        "textContent"
+                    )
+                    print(success_message)
 
-                print(f"{alert_msg}")
-
-                if "취소 승인 하시겠습니까" in alert_msg:
-                    alert.accept()
-
-                    # 정상처리 되었습니다. alert
-                    try:
-                        WebDriverWait(driver, 10).until(EC.alert_is_present())
-                    except Exception as e:
-                        print(f"no alert")
+                    if not "완료되었습니다" in success_message:
                         self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
                         raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
 
-                    alert_ok_try(driver)
-
-                elif alert_msg != "":
-                    alert.accept()
-                    self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
-                    raise Exception(f"{self.shop_name} {order}: {alert_msg}")
-
-                else:
+                except Exception as e:
+                    print(str(e))
                     self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
                     raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+
+                finally:
+                    driver.implicitly_wait(self.default_wait)
 
                 self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
 
@@ -349,10 +343,6 @@ class TicketMonster:
                 print(str(e))
                 if self.shop_name in str(e):
                     raise Exception(str(e))
-
-            finally:
-                driver.close()
-                driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
             print(str(e))
