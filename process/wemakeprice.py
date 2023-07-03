@@ -10,6 +10,8 @@ from dtos.product_dto import ProductDto
 
 from PySide6.QtCore import SignalInstance
 
+from process.ezadmin import check_order_cancel_number_from_ezadmin
+
 from common.chrome import get_chrome_driver, get_chrome_driver_new
 from common.selenium_activities import close_new_tabs, alert_ok_try, wait_loading, send_keys_to_driver
 
@@ -223,12 +225,17 @@ class Wemakeprice:
         # 주문번호 이지어드민 검증
         for order_dict in order_number_list:
             try:
-                self.check_order_cancel_number_from_ezadmin(order_dict)
+                driver.switch_to.window(self.cs_screen_tab)
+                check_order_cancel_number_from_ezadmin(self.log_msg, driver, self.shop_name, order_dict)
 
             except Exception as e:
                 print(str(e))
                 if self.shop_name in str(e):
                     raise Exception(f"{self.shop_name} {order}: 배송전 주문취소 상태가 아닙니다.")
+
+            finally:
+                driver.refresh()
+                driver.switch_to.window(self.shop_screen_tab)
 
         try:
             driver.get("https://wpartner.wemakeprice.com/claim/cancelMain")
@@ -340,134 +347,6 @@ class Wemakeprice:
             print(str(e))
             if self.shop_name in str(e):
                 raise Exception(str(e))
-
-    def check_order_cancel_number_from_ezadmin(self, order_dict: dict):
-        driver = self.driver
-
-        order_number = order_dict["주문번호"]
-        product_name = order_dict["상품명"]
-        product_option: str = order_dict["상품옵션"]
-        product_qty = order_dict["수량"]
-        product_recv_name = order_dict["수령자명"]
-        product_recv_tel = order_dict["수령자연락처"]
-
-        try:
-            driver.switch_to.window(self.cs_screen_tab)
-
-            input_order_number = driver.find_element(By.XPATH, '//td[contains(text(), "주문번호")]/input')
-
-            input_order_number.clear()
-
-            input_order_number.send_keys(order_number)
-
-            search_button = driver.find_element(By.XPATH, '//div[@id="search"][text()="검색"]')
-            driver.execute_script("arguments[0].click();", search_button)
-            time.sleep(2)
-
-            grid_order_trs = driver.find_elements(By.XPATH, '//table[@id="grid_order"]//tr[not(@class="jqgfirstrow")]')
-
-            if len(grid_order_trs) == 0:
-                self.log_msg.emit(f"{self.shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
-                raise Exception(f"{self.shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
-
-            for grid_order_tr in grid_order_trs:
-                try:
-                    driver.execute_script("arguments[0].click();", grid_order_tr)
-                    time.sleep(0.2)
-
-                    grid_product_trs = driver.find_elements(
-                        By.XPATH,
-                        f'//table[contains(@id, "grid_product")]//td[contains(@title, "list_order_id") and contains(@title, "{order_number}")]',
-                    )
-
-                    if len(grid_product_trs) == 0:
-                        self.log_msg.emit(f"{self.shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
-                        raise Exception(f"{self.shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
-
-                    for grid_product_tr in grid_product_trs:
-                        driver.execute_script("arguments[0].click();", grid_product_tr)
-                        time.sleep(0.2)
-
-                        search_product_name = (
-                            driver.find_element(By.XPATH, '//td[@id="di_shop_pname"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (product_name in search_product_name):
-                            continue
-
-                        search_product_option = (
-                            driver.find_element(By.XPATH, '//td[@id="di_shop_options"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (product_option in search_product_option):
-                            continue
-
-                        search_order_number = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_id"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (order_number in search_order_number):
-                            continue
-
-                        search_product_qty = (
-                            driver.find_element(By.XPATH, '//td[@id="di_order_qty"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (product_qty in search_product_qty):
-                            continue
-
-                        search_product_recv_name = (
-                            driver.find_element(By.XPATH, '//td[@id="di_recv_name"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-                        if not (product_recv_name in search_product_recv_name):
-                            continue
-
-                        # search_product_recv_tel = (
-                        #     driver.find_element(By.XPATH, '//td[@id="di_recv_tel"]')
-                        #     .get_attribute("textContent")
-                        #     .strip()
-                        # )
-                        # if not (product_recv_tel in search_product_recv_tel):
-                        #     continue
-
-                        product_cs_state = (
-                            driver.find_element(By.XPATH, '//td[@id="di_product_cs"]')
-                            .get_attribute("textContent")
-                            .strip()
-                        )
-
-                        if not "배송전 주문취소" in product_cs_state:
-                            self.log_msg.emit(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
-                            raise Exception(f"{self.shop_name} {order_dict}: 배송전 주문취소 상태가 아닙니다.")
-
-                        print(
-                            f"{search_order_number}: {search_product_name}, {search_product_option}, {search_product_qty}, {search_product_recv_name}, {product_cs_state}"
-                        )
-
-                except Exception as e:
-                    print(str(e))
-                    if self.shop_name in str(e):
-                        raise Exception(str(e))
-
-                finally:
-                    tab_close_button = driver.find_element(By.XPATH, '//span[contains(@class, "ui-icon-close")]')
-                    driver.execute_script("arguments[0].click();", tab_close_button)
-                    time.sleep(0.2)
-
-        except Exception as e:
-            print(str(e))
-            if self.shop_name in str(e):
-                raise Exception(str(e))
-
-        finally:
-            driver.refresh()
-            driver.switch_to.window(self.shop_screen_tab)
 
     def work_start(self):
         driver = self.driver
