@@ -115,10 +115,10 @@ class Wemakeprice:
             time.sleep(3)
 
             # 클레임번호 목록
-            # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]')
+            # $x('//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[./img]/following-sibling::td[1]')
             claim_number_list = driver.find_elements(
                 By.XPATH,
-                '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[@rowspan][not(./img)][1]',
+                '//div[@id="claimCancelListGrid"]//tr[contains(@class, "dhx_web")]/td[./img]/following-sibling::td[1]',
             )
 
             claim_data = []
