@@ -129,17 +129,155 @@ class Naver:
             )
             time.sleep(0.5)
 
-            # 주문번호 목록 -> 네이버의 경우 구매자 연락처
-            # $x('//tr/td[@data-column-name="receiverTelNo1"]/div')
-            order_number_list = driver.find_elements(By.XPATH, '//tr/td[@data-column-name="receiverTelNo1"]/div')
-            phone_number_pattern = r"^01[016789]-\d{3,4}-\d{4}$"
-            virtual_number_pattern = r"050\d{1}-\d{3,4}-\d{3,4}"
-            for order_number in order_number_list:
-                order_number = order_number.get_attribute("textContent")
-                if re.search(phone_number_pattern, order_number) or re.search(virtual_number_pattern, order_number):
-                    order_list.append(order_number)
-                else:
-                    print(f"{order_number}는 전화번호, 안심번호 양식이 아닙니다.")
+            # 묶음클레임번호 목록
+            # $x('//div[@class="tui-grid-lside-area"]//tr[contains(@class, "tui-grid-row")]/td[@data-column-name="productOrderNo"]/div')
+            claim_number_link_list = driver.find_elements(
+                By.XPATH,
+                '//div[@class="tui-grid-lside-area"]//tr[contains(@class, "tui-grid-row")]/td[@data-column-name="productOrderNo"]/div',
+            )
+
+            claim_number_list = []
+            for claim_number_link in claim_number_link_list:
+                claim_number = claim_number_link.get_attribute("textContent")
+                claim_number_list.append(claim_number)
+
+            claim_data = []
+            for claim_number in claim_number_list:
+                print(f"클레임번호: {claim_number}")
+
+                # 상품주문정보 조회 창을 발생시킨다
+                # https://admin.pay.naver.com/o/v3/manage/order/popup/2023053144020740/productOrderDetail
+                try:
+                    driver.execute_script(
+                        f"window.open('https://admin.pay.naver.com/o/v3/manage/order/popup/{claim_number}/productOrderDetail');"
+                    )
+                    time.sleep(0.2)
+
+                except Exception as e:
+                    print(str(e))
+                    print(f"{claim_number} 해당 클레임번호를 찾지 못했습니다.")
+                    continue
+
+                # 새 창 열림
+                try:
+                    other_tabs = [
+                        tab
+                        for tab in driver.window_handles
+                        if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+                    ]
+                    claim_check_tab = other_tabs[0]
+                except Exception as e:
+                    print(str(e))
+                    print(f"{claim_number} 새 창을 찾지 못했습니다.")
+                    continue
+
+                # 새 창으로 이동 후 작업
+                try:
+                    driver.switch_to.window(claim_check_tab)
+                    time.sleep(0.5)
+
+                    driver.implicitly_wait(1)
+
+                    product_dto = ProductDto()
+
+                    # 주문번호 -> 묶음번호
+                    order_number = ""
+                    try:
+                        order_number = driver.find_element(
+                            By.XPATH, '//th[text()="주문번호"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.order_number = order_number
+
+                    # 상품주문번호 -> 상세주문번호
+                    order_detail_number = ""
+                    try:
+                        order_detail_number = driver.find_element(
+                            By.XPATH, '//strong[contains(text(), "상품주문번호")]/following-sibling::span[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.order_detail_number = order_detail_number
+
+                    # 상품명
+                    product_name = ""
+                    try:
+                        product_name = driver.find_element(
+                            By.XPATH, '//th[text()="상품명"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.product_name = product_name
+
+                    # 옵션
+                    product_option = ""
+                    try:
+                        product_option = driver.find_element(
+                            By.XPATH, '//th[text()="옵션"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.product_option = product_option
+
+                    # 주문수량
+                    product_qty = ""
+                    try:
+                        product_qty = driver.find_element(
+                            By.XPATH, '//th[text()="주문수량"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                        # product_qty = re.sub(r"[^0-9]", "", product_qty)
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.product_qty = product_qty
+
+                    # 수취인명
+                    product_recv_name = ""
+                    try:
+                        product_recv_name = driver.find_element(
+                            By.XPATH, '//th[text()="수취인명"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.product_recv_name = product_recv_name
+
+                    # 연락처1
+                    product_recv_tel = ""
+                    try:
+                        product_recv_tel = driver.find_element(
+                            By.XPATH, '//th[text()="연락처1"]/following-sibling::td[1]'
+                        ).get_attribute("textContent")
+                    except Exception as e:
+                        print(str(e))
+                    product_dto.product_recv_tel = product_recv_tel
+
+                    product_dto.to_print()
+
+                    claim_data.append(
+                        {"claim_number": order_detail_number, "order_number_list": product_dto.get_dict()}
+                    )
+
+                except Exception as e:
+                    print(str(e))
+                    print(f"{claim_number} 정보를 수집하지 못했습니다.")
+                    continue
+
+                finally:
+                    driver.implicitly_wait(self.default_wait)
+                    driver.close()
+                    driver.switch_to.window(self.shop_screen_tab)
+
+            result = defaultdict(list)
+
+            for item in claim_data:
+                result[item["claim_number"]].append(item["order_number_list"])
+
+            result_dict = {claim_number: order_number_list for claim_number, order_number_list in result.items()}
+
+            order_list = [
+                {"claim_number": claim_number, "order_number_list": order_number_list}
+                for claim_number, order_number_list in result_dict.items()
+            ]
 
         except Exception as e:
             print(str(e))
@@ -171,31 +309,27 @@ class Naver:
                 driver.switch_to.window(self.shop_screen_tab)
 
         try:
-            driver.get("https://spc.tmon.co.kr/claim/cancel")
+            driver.get("https://admin.pay.naver.com/o/v3/claim/cancel?summaryInfoType=CANCEL_REQUEST_C1")
 
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//h2[text()="출고전 취소 관리"]')))
-            time.sleep(0.2)
-
-            # 검색 클릭
-            btn_srch = driver.find_element(By.XPATH, '//span[@id="btn_srch" and text()="검색"]')
-            driver.execute_script("arguments[0].click();", btn_srch)
-            time.sleep(3)
-
-            # 취소 품목 체크박스
-            # $x('//tr[./td[contains(@style, "underline") and contains(text(), "442530851")]]//img[contains(@onclick, "cancelBubble")]')
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH,
-                f'//tr[.//a[text()="{claim_number}"]]//img[contains(@onclick, "cancelBubble")]',
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, '//h2[contains(text(), "취소관리")]'))
             )
-            driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
-            time.sleep(1)
+            time.sleep(0.5)
 
-            # 취소처리 버튼
-            btn_cancel_proc = driver.find_element(By.XPATH, '//a[@class="btn_cancel_proc" and text()="취소처리"]')
+            # 취소 품목 행과 동일한 lside에 존재하는 radiobutton
+            # $x('//tr[.//a[text()="2023051345322390"]]')
+            order_cancel_target_radio_button = driver.find_element(
+                By.XPATH, f'//tr[.//a[text()="{claim_number}"]]//input[contains(@type, "radio")]'
+            )
+            driver.execute_script("arguments[0].click();", order_cancel_target_radio_button)
+            time.sleep(0.5)
+
+            # 취소 완료처리 버튼
+            btn_cancel_proc = driver.find_element(By.XPATH, '//button[./span[text()="취소 완료처리"]]')
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
-            # 해당 요청을 처리할 수 없습니다. alert
+            # 새 창 열림 or alert ['선택된 상품주문건이 없습니다.', '취소 승인 처리가 불가능한 상태입니다. 클레임 처리상태를 확인해 주세요.']
             alert_msg = ""
             try:
                 WebDriverWait(driver, 1).until(EC.alert_is_present())
@@ -206,7 +340,7 @@ class Naver:
 
             print(f"{alert_msg}")
 
-            if ("해당 요청을 처리할 수 없습니다" in alert_msg) or ("처리할 요청건을 선택해 주세요" in alert_msg):
+            if ("선택된 상품주문건이 없습니다" in alert_msg) or ("취소 승인 처리가 불가능한 상태입니다" in alert_msg):
                 alert.accept()
                 self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
                 raise Exception(f"{self.shop_name} {order}: {alert_msg}")
@@ -216,41 +350,74 @@ class Naver:
                 self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
                 raise Exception(f"{self.shop_name} {order}: {alert_msg}")
 
-            # modal
+            other_tabs = [
+                tab for tab in driver.window_handles if tab != self.cs_screen_tab and tab != self.shop_screen_tab
+            ]
+            order_cancel_tab = other_tabs[0]
+
             try:
-                ticketmonster_order_cancel_button = driver.find_element(
-                    By.XPATH, '//div[@class="spc_layer claim"][.//h3[text()="취소처리"]]//button[text()="확인"]'
-                )
-                driver.execute_script("arguments[0].click();", ticketmonster_order_cancel_button)
-                time.sleep(0.5)
+                driver.switch_to.window(order_cancel_tab)
+                time.sleep(1)
 
-                # 요청한 1건의 처리가 완료되었습니다.
-                # $x('//*[contains(text(), "완료되었습니다")]')
+                # 취소비용 청구관련 구매자에게 전하실 말씀 (최대 500자) [구매자에게 전하실 말씀을 입력하십시오.]
+                seller_memo = "전체주문이 취소되어 클레임 비용을 청구하지 않습니다."
+                input_sellerMemoByCancel = driver.find_element(By.XPATH, '//input[@id="sellerMemoByCancel"]')
                 try:
-                    driver.implicitly_wait(20)
-                    success_message = driver.find_element(By.XPATH, '//p[@class="message"]').get_attribute(
-                        "textContent"
-                    )
-                    print(success_message)
+                    input_sellerMemoByCancel.clear()
+                    input_sellerMemoByCancel.send_keys(seller_memo)
+                except Exception as e:
+                    print(str(e))
+                finally:
+                    time.sleep(1)
 
-                    if not "완료되었습니다" in success_message:
+                order_cancel_button = driver.find_element(By.XPATH, '//a[./span[text()="저장"]]')
+                driver.execute_script("arguments[0].click();", order_cancel_button)
+                time.sleep(1)
+
+                # 클레임 비용이 0원인 건은 승인처리시 즉시 환불이 시도됩니다. 승인처리 하시겠습니까? alert
+                alert_msg = ""
+                try:
+                    WebDriverWait(driver, 5).until(EC.alert_is_present())
+                    alert = driver.switch_to.alert
+                    alert_msg = alert.text
+                except Exception as e:
+                    print(f"no alert")
+
+                print(f"{alert_msg}")
+
+                if "승인처리 하시겠습니까" in alert_msg:
+                    alert.accept()
+                    time.sleep(1)
+
+                    # 정상적으로 저장되었습니다. alert
+                    try:
+                        WebDriverWait(driver, 10).until(EC.alert_is_present())
+                    except Exception as e:
+                        print(f"no alert")
                         self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
                         raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
 
-                except Exception as e:
-                    print(str(e))
+                    alert_ok_try(driver)
+                    time.sleep(0.5)
+
+                elif alert_msg != "":
+                    self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
+                    raise Exception(f"{self.shop_name} {order}: {alert_msg}")
+
+                else:
                     self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
                     raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
-
-                finally:
-                    driver.implicitly_wait(self.default_wait)
 
                 self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
 
             except Exception as e:
                 print(str(e))
+                driver.close()
                 if self.shop_name in str(e):
                     raise Exception(str(e))
+
+            finally:
+                driver.switch_to.window(self.shop_screen_tab)
 
         except Exception as e:
             print(str(e))

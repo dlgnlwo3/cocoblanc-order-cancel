@@ -222,8 +222,8 @@ def check_order_cancel_number_from_ezadmin(
                 )
 
                 if len(grid_product_trs) == 0:
-                    log_msg.emit(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
-                    raise Exception(f"{shop_name} {order_dict}: 이지어드민 검색 결과가 없습니다.")
+                    log_msg.emit(f"{shop_name} {order_dict}: 주문번호에 맞는 정보가 없습니다.")
+                    raise Exception(f"{shop_name} {order_dict}: 주문번호에 맞는 정보가 없습니다.")
 
                 for grid_product_tr in grid_product_trs:
                     driver.execute_script("arguments[0].click();", grid_product_tr)
@@ -482,12 +482,12 @@ def check_order_cancel_number_from_ezadmin(
                         if not (product_qty in search_product_qty):
                             continue
 
-                        # 주문번호
-                        if not (order_number in search_order_number):
-                            continue
+                        # # 주문번호
+                        # if not (order_number in re.sub(r"[^0-9]", "", search_order_number)):
+                        #     continue
 
                         # 주문상세번호
-                        if not (order_detail_number in search_order_detail_number):
+                        if not (order_number in search_order_detail_number):
                             continue
 
                         # 수령자
