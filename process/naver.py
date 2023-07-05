@@ -389,16 +389,43 @@ class Naver:
                     alert.accept()
                     time.sleep(1)
 
+                    # # 정상적으로 저장되었습니다. alert
+                    # try:
+                    #     WebDriverWait(driver, 10).until(EC.alert_is_present())
+                    # except Exception as e:
+                    #     print(f"no alert")
+                    #     self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+                    #     raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+
+                    # alert_ok_try(driver)
+                    # time.sleep(0.5)
+
                     # 정상적으로 저장되었습니다. alert
+                    alert_msg = ""
                     try:
                         WebDriverWait(driver, 10).until(EC.alert_is_present())
+                        alert = driver.switch_to.alert
+                        alert_msg = alert.text
+
                     except Exception as e:
                         print(f"no alert")
                         self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
                         raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
 
-                    alert_ok_try(driver)
-                    time.sleep(0.5)
+                    print(f"{alert_msg}")
+
+                    # alert_ok_try(driver)
+
+                    if "정상적으로 저장되었습니다" in alert_msg:
+                        alert.accept()
+
+                    elif alert_msg != "":
+                        alert.accept()
+                        self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
+
+                    else:
+                        self.log_msg.emit(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
+                        raise Exception(f"{self.shop_name} {order}: 취소 승인 메시지를 찾지 못했습니다.")
 
                 elif alert_msg != "":
                     self.log_msg.emit(f"{self.shop_name} {order}: {alert_msg}")
