@@ -11,6 +11,8 @@ class GUIDto:
         self.__stats_file = ""
         self.__sheet_name = ""
 
+        self.__selected_shop_list = []
+
     @property
     def account_file(self):  # getter
         return self.__account_file
@@ -35,7 +37,16 @@ class GUIDto:
     def sheet_name(self, value):  # setter
         self.__sheet_name = value
 
+    @property
+    def selected_shop_list(self):  # getter
+        return self.__selected_shop_list
+
+    @selected_shop_list.setter
+    def selected_shop_list(self, value):  # setter
+        self.__selected_shop_list = value
+
     def to_print(self):
         print("account_file: ", self.account_file)
         print("stats_file: ", self.stats_file)
         print("sheet_name: ", self.sheet_name)
+        print("selected_shop_list: ", self.selected_shop_list)

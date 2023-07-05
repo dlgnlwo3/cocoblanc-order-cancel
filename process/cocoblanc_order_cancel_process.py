@@ -81,15 +81,14 @@ class CocoblancOrderCancelProcess:
         try:
             self.dict_accounts = self.get_dict_account()
 
-            # 쇼핑몰의 수 만큼 작업 (계정 엑셀 파일의 행)
-            for account in self.dict_accounts:
+            ezadmin = Ezadmin(self.log_msg, self.driver, self.dict_accounts["이지어드민"])
+            ezadmin.login()
+            self.cs_screen_tab = ezadmin.switch_to_cs_screen()
+
+            # 쇼핑몰의 수 만큼 작업
+            for account in self.guiDto.selected_shop_list:
                 try:
                     dict_account = self.dict_accounts[account]
-
-                    if account == "이지어드민":
-                        ezadmin = Ezadmin(self.log_msg, self.driver, dict_account)
-                        ezadmin.login()
-                        self.cs_screen_tab = ezadmin.switch_to_cs_screen()
 
                     if account == "카카오톡스토어":
                         kakaotalk_store = KakaoTalkStore(self.log_msg, self.driver, self.cs_screen_tab, dict_account)

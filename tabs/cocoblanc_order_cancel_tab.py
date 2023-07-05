@@ -17,6 +17,8 @@ import pandas as pd
 from configs.cocoblanc_order_cancel_config import CocoblancOrderCancelConfig as Config
 from configs.cocoblanc_order_cancel_config import CocoblancOrderCancelData as ConfigData
 
+from enums.shop_name_enum import ShopNameEnum
+
 from common.chrome import open_browser
 
 
@@ -52,6 +54,16 @@ class CocoblancOrderCancelTab(QWidget):
             QMessageBox.information(self, "작업 시작", f"브라우저 작업을 마쳐주세요.")
             return
 
+        selected_shop_items = self.shop_listwidget.selectedItems()
+        selected_shop_list = []
+
+        for selected_shop in selected_shop_items:
+            selected_shop_list.append(selected_shop.text())
+
+        if len(selected_shop_list) <= 0:
+            QMessageBox.information(self, "시작", f"상점을 선택해주세요.")
+            return
+
         if self.account_file.text() == "":
             QMessageBox.information(self, "작업 시작", f"계정 엑셀 파일을 선택해주세요.")
             return
@@ -64,6 +76,7 @@ class CocoblancOrderCancelTab(QWidget):
 
         guiDto = GUIDto()
         guiDto.account_file = account_file
+        guiDto.selected_shop_list = selected_shop_list
 
         self.order_cancel_thread = CocoblancOrderCancelThread()
         self.order_cancel_thread.log_msg.connect(self.log_append)
@@ -178,6 +191,16 @@ class CocoblancOrderCancelTab(QWidget):
         stats_file_inner_layout.addWidget(self.stats_file_select_button)
         stats_file_groupbox.setLayout(stats_file_inner_layout)
 
+        # 상점목록
+        shop_list_groupbox = QGroupBox("상점목록")
+        self.shop_listwidget = QListWidget(self)
+        self.shop_listwidget.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.shop_listwidget.addItems(ShopNameEnum.shop_list.value)
+
+        shop_list_inner_layout = QHBoxLayout()
+        shop_list_inner_layout.addWidget(self.shop_listwidget)
+        shop_list_groupbox.setLayout(shop_list_inner_layout)
+
         # 사전 작업용 브라우저
         chrome_browser_groupbox = QGroupBox("브라우저 사전 작업")
         chrome_browser_button = QPushButton("브라우저 열기")
@@ -219,8 +242,8 @@ class CocoblancOrderCancelTab(QWidget):
         # top_layout.addWidget(stats_file_groupbox)
 
         mid_layout = QHBoxLayout()
-        # mid_layout.addStretch(6)
-        # mid_layout.addWidget(sheet_setting_groupbox, 4)
+        mid_layout.addStretch(6)
+        mid_layout.addWidget(shop_list_groupbox, 4)
 
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch(5)
@@ -232,7 +255,7 @@ class CocoblancOrderCancelTab(QWidget):
 
         layout = QVBoxLayout()
         layout.addLayout(top_layout)
-        # layout.addLayout(mid_layout, 1)
+        layout.addLayout(mid_layout, 2)
         layout.addLayout(bottom_layout)
         layout.addLayout(log_layout, 5)
 
