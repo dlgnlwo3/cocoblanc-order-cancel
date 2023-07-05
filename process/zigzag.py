@@ -355,10 +355,15 @@ class Zigzag:
                 time.sleep(5)
 
                 # 1개의 상품주문이 취소 완료 처리 되었습니다.
-                cancel_success_message = driver.find_element(
-                    By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
-                ).get_attribute("textContent")
-                print(cancel_success_message)
+
+                try:
+                    cancel_success_message = driver.find_element(
+                        By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
+                    ).get_attribute("textContent")
+                    print(cancel_success_message)
+                except Exception as e:
+                    self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료 메시지를 찾지 못했습니다.")
+                    raise Exception(f"{self.shop_name} {order}: 취소 완료 메시지를 찾지 못했습니다.")
 
                 self.log_msg.emit(f"{self.shop_name} {order}: 취소 완료")
 

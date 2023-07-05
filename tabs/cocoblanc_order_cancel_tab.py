@@ -35,7 +35,7 @@ class CocoblancOrderCancelTab(QWidget):
     def log_append(self, text):
         today = str(datetime.now())[0:10]
         now = str(datetime.now())[0:-7]
-        self.browser.append(f"[{now}] {str(text)}")
+        self.browser.append(f"[{now}] {str(text)}\n")
         global_log_append(text)
 
     # 크롬 브라우저
