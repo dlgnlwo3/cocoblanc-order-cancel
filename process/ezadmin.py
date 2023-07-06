@@ -223,7 +223,8 @@ def check_order_cancel_number_from_ezadmin(
 
                 if len(grid_product_trs) == 0:
                     log_msg.emit(f"{shop_name} {order_dict}: 주문번호에 맞는 정보가 없습니다.")
-                    raise Exception(f"{shop_name} {order_dict}: 주문번호에 맞는 정보가 없습니다.")
+                    continue
+                    # raise Exception(f"{shop_name} {order_dict}: 주문번호에 맞는 정보가 없습니다.")
 
                 for grid_product_tr in grid_product_trs:
                     driver.execute_script("arguments[0].click();", grid_product_tr)
