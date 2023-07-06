@@ -136,10 +136,9 @@ class Naver:
                 '//div[@class="tui-grid-lside-area"]//tr[contains(@class, "tui-grid-row")]/td[@data-column-name="productOrderNo"]/div',
             )
 
-            claim_number_list = []
-            for claim_number_link in claim_number_link_list:
-                claim_number = claim_number_link.get_attribute("textContent")
-                claim_number_list.append(claim_number)
+            claim_number_list = [
+                claim_number_link.get_attribute("textContent") for claim_number_link in claim_number_link_list
+            ]
 
             claim_data = []
             for claim_number in claim_number_list:

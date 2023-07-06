@@ -135,10 +135,12 @@ class Zigzag:
                 By.XPATH, '//tr[contains(@class, "TableRow")]/td[@rowspan]/button'
             )
 
-            claim_number_list = []
-            for claim_number_tr in claim_number_tr_list:
-                claim_number = claim_number_tr.get_attribute("textContent")
-                claim_number_list.append(claim_number)
+            claim_number_list = [
+                claim_number_tr.get_attribute("textContent") for claim_number_tr in claim_number_tr_list
+            ]
+            # for claim_number_tr in claim_number_tr_list:
+            #     claim_number = claim_number_tr.get_attribute("textContent")
+            #     claim_number_list.append(claim_number)
 
             # 해당 주문번호에 묶여있는 행을 특정할 수 없어서 주문번호로 검색 후 나오는 모든 행을 추출해야 함
             claim_data = []

@@ -132,10 +132,12 @@ class TicketMonster:
             # $x('//tr[contains(@class, "_xp")]/td[2]/a')
             claim_number_link_list = driver.find_elements(By.XPATH, '//tr[contains(@class, "_xp")]/td[2]/a')
 
-            claim_number_list = []
-            for claim_number_link in claim_number_link_list:
-                claim_number = claim_number_link.get_attribute("textContent")
-                claim_number_list.append(claim_number)
+            claim_number_list = [
+                claim_number_link.get_attribute("textContent") for claim_number_link in claim_number_link_list
+            ]
+            # for claim_number_link in claim_number_link_list:
+            #     claim_number = claim_number_link.get_attribute("textContent")
+            #     claim_number_list.append(claim_number)
 
             claim_data = []
             for claim_number in claim_number_list:
