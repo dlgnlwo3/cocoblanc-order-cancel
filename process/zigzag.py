@@ -177,7 +177,9 @@ class Zigzag:
                 driver.execute_script("arguments[0].click();", search_button)
                 time.sleep(0.5)
 
-                # $x('//tr[not(.//div[contains(@class, "header-col")])]')
+                # $x('//tr[not(.//div[contains(@class, "header-col")])]/td')
+                # 일반적으로 36개의 td를 갖고있음
+                # 묶음번호에 묶여있다면 35개의 td를 갖고있음
                 claim_tr_list = driver.find_elements(By.XPATH, f'//tr[not(.//div[contains(@class, "header-col")])]')
 
                 claim_tr: webdriver.Chrome._web_element_cls
@@ -187,13 +189,13 @@ class Zigzag:
                     order_number = claim_number
                     product_dto.order_number = order_number
 
-                    # 첫번째 행인 경우에만 위치가 다름 (묶음번호가 표기되어있어서)
-                    # if tr_index == 0:
-                    #     product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
-                    # else:
-                    #     product_name = claim_tr.find_element(By.XPATH, f"./td[13]").get_attribute("textContent").strip()
+                    td_len = len(claim_tr.find_elements(By.XPATH, "./td"))
 
-                    product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
+                    if td_len == 36:
+                        product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
+                    else:
+                        product_name = claim_tr.find_element(By.XPATH, f"./td[13]").get_attribute("textContent").strip()
+
                     product_name = re.sub(r"\[.*?\]", "", product_name)
                     product_name = product_name.strip()
                     product_dto.product_name = product_name
@@ -211,38 +213,30 @@ class Zigzag:
                     product_option = product_option.replace(" - ", ", ")
                     product_dto.product_option = product_option
 
-                    # if tr_index == 0:
-                    #     product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
-                    # else:
-                    #     product_qty = claim_tr.find_element(By.XPATH, f"./td[21]").get_attribute("textContent").strip()
-
-                    product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
+                    if td_len == 36:
+                        product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
+                    else:
+                        product_qty = claim_tr.find_element(By.XPATH, f"./td[21]").get_attribute("textContent").strip()
                     product_dto.product_qty = product_qty
 
-                    # if tr_index == 0:
-                    #     product_recv_name = (
-                    #         claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
-                    #     )
-                    # else:
-                    #     product_recv_name = (
-                    #         claim_tr.find_element(By.XPATH, f"./td[28]").get_attribute("textContent").strip()
-                    #     )
-
-                    product_recv_name = (
-                        claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
-                    )
+                    if td_len == 36:
+                        product_recv_name = (
+                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                        )
+                    else:
+                        product_recv_name = (
+                            claim_tr.find_element(By.XPATH, f"./td[28]").get_attribute("textContent").strip()
+                        )
                     product_dto.product_recv_name = product_recv_name
 
-                    # if tr_index == 0:
-                    #     product_recv_tel = (
-                    #         claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
-                    #     )
-                    # else:
-                    #     product_recv_tel = (
-                    #         claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
-                    #     )
-
-                    product_recv_tel = claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
+                    if td_len == 36:
+                        product_recv_tel = (
+                            claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
+                        )
+                    else:
+                        product_recv_tel = (
+                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                        )
                     product_dto.product_recv_tel = product_recv_tel
 
                     product_dto.to_print()
@@ -341,10 +335,13 @@ class Zigzag:
 
             # 취소 품목 체크박스
             # $x('//tr[.//button[contains(text(), "138752587359305632")]]//th[contains(@class, "checkbox")]//input')
-            order_cancel_target_checkbox = driver.find_element(
-                By.XPATH,
-                f'//tr[.//button[contains(text(), "{claim_number}")]]//th[contains(@class, "checkbox")]//input',
-            )
+            # order_cancel_target_checkbox = driver.find_element(
+            #     By.XPATH,
+            #     f'//tr[.//button[contains(text(), "{claim_number}")]]//th[contains(@class, "checkbox")]//input',
+            # )
+
+            # 전체 체크 체크박스
+            order_cancel_target_checkbox = driver.find_element(By.XPATH, f'//thead//input[@type="checkbox"]')
             driver.execute_script("arguments[0].click();", order_cancel_target_checkbox)
             time.sleep(1)
 
@@ -353,20 +350,27 @@ class Zigzag:
             driver.execute_script("arguments[0].click();", btn_cancel_proc)
             time.sleep(0.5)
 
+            # 체크박스로 1개의 상품만 체크된 경우
             try:
+                driver.implicitly_wait(1)
                 zigzag_order_cancel_button = driver.find_element(By.XPATH, '//button[contains(text(), "취소완료")]')
                 driver.execute_script("arguments[0].click();", zigzag_order_cancel_button)
                 time.sleep(1)
+            except Exception as e:
+                print(f"2개 이상의 결과")
+            finally:
+                driver.implicitly_wait(self.default_wait)
 
-                # 선택하신 1건의 상품주문을 환불처리 하시겠습니까?
+            try:
+                # 선택하신 1건의 상품주문을 환불처리 하시겠습니까? or 선택하신 2개의 상품 주문을 취소처리 하시겠습니까?
                 cancel_agree_button = driver.find_element(
                     By.XPATH,
-                    '//div[@class="modal-content"][.//div[contains(text(), "환불처리 하시겠습니까?")]]//button[text()="확인"]',
+                    '//div[@class="modal-content"][.//div[contains(text(), "하시겠습니까?")]]//button[text()="확인"]',
                 )
                 driver.execute_script("arguments[0].click();", cancel_agree_button)
                 time.sleep(5)
 
-                # 1개의 상품주문이 취소 완료 처리 되었습니다.
+                # 1개의 상품주문이 취소 완료 처리 되었습니다. or 2개의 상품주문이 취소 완료 처리 되었습니다.
                 try:
                     cancel_success_message = driver.find_element(
                         By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
