@@ -138,6 +138,7 @@ class Zigzag:
             claim_number_list = [
                 claim_number_tr.get_attribute("textContent") for claim_number_tr in claim_number_tr_list
             ]
+            claim_number_list = list(dict.fromkeys(claim_number_list))
             # for claim_number_tr in claim_number_tr_list:
             #     claim_number = claim_number_tr.get_attribute("textContent")
             #     claim_number_list.append(claim_number)
@@ -187,11 +188,12 @@ class Zigzag:
                     product_dto.order_number = order_number
 
                     # 첫번째 행인 경우에만 위치가 다름 (묶음번호가 표기되어있어서)
-                    if tr_index == 0:
-                        product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
-                    else:
-                        product_name = claim_tr.find_element(By.XPATH, f"./td[13]").get_attribute("textContent").strip()
+                    # if tr_index == 0:
+                    #     product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
+                    # else:
+                    #     product_name = claim_tr.find_element(By.XPATH, f"./td[13]").get_attribute("textContent").strip()
 
+                    product_name = claim_tr.find_element(By.XPATH, f"./td[14]").get_attribute("textContent").strip()
                     product_name = re.sub(r"\[.*?\]", "", product_name)
                     product_name = product_name.strip()
                     product_dto.product_name = product_name
@@ -209,30 +211,38 @@ class Zigzag:
                     product_option = product_option.replace(" - ", ", ")
                     product_dto.product_option = product_option
 
-                    if tr_index == 0:
-                        product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
-                    else:
-                        product_qty = claim_tr.find_element(By.XPATH, f"./td[21]").get_attribute("textContent").strip()
+                    # if tr_index == 0:
+                    #     product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
+                    # else:
+                    #     product_qty = claim_tr.find_element(By.XPATH, f"./td[21]").get_attribute("textContent").strip()
+
+                    product_qty = claim_tr.find_element(By.XPATH, f"./td[22]").get_attribute("textContent").strip()
                     product_dto.product_qty = product_qty
 
-                    if tr_index == 0:
-                        product_recv_name = (
-                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
-                        )
-                    else:
-                        product_recv_name = (
-                            claim_tr.find_element(By.XPATH, f"./td[28]").get_attribute("textContent").strip()
-                        )
+                    # if tr_index == 0:
+                    #     product_recv_name = (
+                    #         claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                    #     )
+                    # else:
+                    #     product_recv_name = (
+                    #         claim_tr.find_element(By.XPATH, f"./td[28]").get_attribute("textContent").strip()
+                    #     )
+
+                    product_recv_name = (
+                        claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                    )
                     product_dto.product_recv_name = product_recv_name
 
-                    if tr_index == 0:
-                        product_recv_tel = (
-                            claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
-                        )
-                    else:
-                        product_recv_tel = (
-                            claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
-                        )
+                    # if tr_index == 0:
+                    #     product_recv_tel = (
+                    #         claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
+                    #     )
+                    # else:
+                    #     product_recv_tel = (
+                    #         claim_tr.find_element(By.XPATH, f"./td[29]").get_attribute("textContent").strip()
+                    #     )
+
+                    product_recv_tel = claim_tr.find_element(By.XPATH, f"./td[30]").get_attribute("textContent").strip()
                     product_dto.product_recv_tel = product_recv_tel
 
                     product_dto.to_print()
@@ -357,7 +367,6 @@ class Zigzag:
                 time.sleep(5)
 
                 # 1개의 상품주문이 취소 완료 처리 되었습니다.
-
                 try:
                     cancel_success_message = driver.find_element(
                         By.XPATH, '//div[contains(text(), "취소 완료 처리 되었습니다")]'
