@@ -66,7 +66,7 @@ class KakaoTalkStore:
             login_id = self.dict_account["ID"]
             login_pw = self.dict_account["PW"]
 
-            id_input = driver.find_element(By.XPATH, '//input[@name="loginKey"]')
+            id_input = driver.find_element(By.XPATH, '//input[contains(@id, "loginId")]')
             time.sleep(0.2)
             id_input.click()
             time.sleep(0.2)
@@ -74,7 +74,7 @@ class KakaoTalkStore:
             time.sleep(0.2)
             id_input.send_keys(login_id)
 
-            pw_input = driver.find_element(By.XPATH, '//input[@name="password"]')
+            pw_input = driver.find_element(By.XPATH, '//input[contains(@id, "password")]')
             time.sleep(0.2)
             pw_input.click()
             time.sleep(0.2)
