@@ -201,16 +201,19 @@ class Zigzag:
                     product_dto.product_name = product_name
 
                     # 옵션 td
-                    # $x('//td[.//div/span[contains(text(), "- ")]]')
-                    product_option = (
-                        claim_tr.find_element(By.XPATH, f'./td[.//div/span[contains(text(), "- ")]]')
-                        .get_attribute("textContent")
-                        .strip()
-                    )
+                    # $x('//tr[not(.//div[contains(@class, "header-col")])]/td[18]')
+                    if td_len == 36:
+                        product_option = (
+                            claim_tr.find_element(By.XPATH, f"./td[18]").get_attribute("textContent").strip()
+                        )
+                    else:
+                        product_option = (
+                            claim_tr.find_element(By.XPATH, f"./td[17]").get_attribute("textContent").strip()
+                        )
 
-                    product_option = product_option[product_option.find("- ") + 2 :]
                     product_option = product_option.replace(": ", "=")
-                    product_option = product_option.replace(" - ", ", ")
+                    option_slice = product_option.find(" ")
+                    product_option = product_option[:option_slice] + ", " + product_option[option_slice + 1 :]
                     product_dto.product_option = product_option
 
                     if td_len == 36:
